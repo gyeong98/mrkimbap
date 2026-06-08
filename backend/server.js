@@ -114,15 +114,15 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-app.get("/api/db-test", async (req, res) => {
-  try {
-    const result = await pool.query("SELECT NOW()");
-    res.json(result.rows[0]);
-  } catch (err) {
-    console.error("Database connection failed:", err);
-    res.status(500).json({ error: "Database connection failed" });
-  }
-});
+// app.get("/api/db-test", async (req, res) => {
+//   try {
+//     const result = await pool.query("SELECT NOW()");
+//     res.json(result.rows[0]);
+//   } catch (err) {
+//     console.error("Database connection failed:", err);
+//     res.status(500).json({ error: "Database connection failed" });
+//   }
+// });
 
 app.get("/api/items", async (req, res) => {
   try {
@@ -141,7 +141,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { pickupDate, items } = req.body;
+    const { customerName, customerEmail, pickupDate, items } = req.body;
 
     if (!pickupDate) {
       return res.status(400).json({ error: "Pickup date is required" });
@@ -149,6 +149,12 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "Items are required" });
+    }
+
+    if (!customerName || !customerEmail) {
+      return res.status(400).json({
+        error: "Customer name and email are required",
+      });
     }
 
     await client.query("BEGIN");
@@ -210,11 +216,11 @@ app.post("/api/create-checkout-session", async (req, res) => {
     const orderResult = await client.query(
       `
       INSERT INTO orders 
-      (stripe_session_id, status, pickup_date)
-      VALUES ($1, 'pending', $2)
+      (stripe_session_id, status, pickup_date, customer_name, customer_email)
+      VALUES ($1, 'pending', $2, $3, $4)
       RETURNING id
       `,
-      [session.id, pickupDate]
+      [session.id, pickupDate, customerName.trim(), customerEmail.trim()]
     );
 
     const orderId = orderResult.rows[0].id;
@@ -256,4 +262,23 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+app.get("/api/pickup-dates", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, pickup_date
+      FROM pickup_dates
+      WHERE active = true
+      ORDER BY pickup_date
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      error: "Failed to fetch pickup dates",
+    });
+  }
 });

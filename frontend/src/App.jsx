@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import {
   CalendarDays,
   Loader2,
@@ -68,6 +69,9 @@ export default function App() {
   const [menuItems, setMenuItems] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [pickupDate, setPickupDate] = useState(getTodayDate());
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [availableDates, setAvailableDates] = useState([]);
   const [error, setError] = useState("");
   const [isLoadingItems, setIsLoadingItems] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -110,8 +114,26 @@ export default function App() {
     }
   };
 
+  const fetchAvailableDates = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/api/pickup-dates`
+    );
+
+    const data = await response.json();
+
+    console.log("pickup dates:", data);
+    console.log("why is this being called twice", data);
+
+    setAvailableDates(data);
+  } catch (err) {
+    console.error("Failed to load pickup dates", err);
+  }
+};
+
   useEffect(() => {
     fetchMenuItems();
+    fetchAvailableDates();
   }, []);
 
   const updateQuantity = (item, nextQuantity) => {
@@ -142,7 +164,19 @@ export default function App() {
       return;
     }
 
+    if (!customerName.trim()) {
+      setError("Please enter your name.");
+      return;
+    }
+
+    if (!customerEmail.trim()) {
+      setError("Please enter your email.");
+      return;
+    }
+
     const payload = {
+      customerName: customerName.trim(),
+      customerEmail: customerEmail.trim(),
       pickupDate,
       items: cartItems.map((item) => ({
         itemId: item.itemId,
@@ -354,11 +388,41 @@ export default function App() {
 
               <label className="block">
                 <span className="mb-2 block text-sm font-bold text-stone-700">Pickup Date</span>
-                <input
-                  type="date"
-                  min={getTodayDate()}
+                <select
                   value={pickupDate}
                   onChange={(event) => setPickupDate(event.target.value)}
+                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                >
+                  <option value="">Select pickup date</option>
+
+                  {availableDates.map((date) => (
+                    <option
+                      key={date.id}
+                      value={date.pickup_date}
+                    >
+                      {new Date(date.pickup_date).toLocaleDateString()}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block mb-4">
+                <span className="mb-2 block text-sm font-bold text-stone-700">Customer Name</span>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder="Enter your name"
+                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                />
+              </label>
+
+              <label className="block mb-4">
+                <span className="mb-2 block text-sm font-bold text-stone-700">Customer Email</span>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(event) => setCustomerEmail(event.target.value)}
+                  placeholder="Enter your email"
                   className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
                 />
               </label>
@@ -438,8 +502,26 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="w-full border-t border-stone-200 bg-white px-5 py-8 text-center text-sm text-stone-500 md:px-8">
-        © {new Date().getFullYear()} MrKimbap. Fresh Korean rolls for pickup.
+      <footer className="w-full border-t border-stone-200 bg-white">
+        <div className="mx-auto max-w-7xl px-5 py-8 md:px-8">
+
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <p className="text-sm text-stone-500">
+              © {new Date().getFullYear()} MrKimbap. All rights reserved.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-6 text-sm">
+              <Link to="/privacy-policy">Privacy Policy</Link>
+
+              <Link to="/terms-of-service">Terms of Service</Link>      
+
+              <Link to="/contact">Contact</Link>
+
+              <Link to="/refund-policy">Refund Policy</Link>
+            </div>
+          </div>
+
+        </div>
       </footer>
     </div>
   );
