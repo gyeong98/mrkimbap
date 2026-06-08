@@ -115,21 +115,21 @@ export default function App() {
   };
 
   const fetchAvailableDates = async () => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/pickup-dates`
-    );
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/pickup-dates`
+      );
 
-    const data = await response.json();
+      const data = await response.json();
 
-    console.log("pickup dates:", data);
-    console.log("why is this being called twice", data);
+      console.log("pickup dates:", data);
+      console.log("why is this being called twice", data);
 
-    setAvailableDates(data);
-  } catch (err) {
-    console.error("Failed to load pickup dates", err);
-  }
-};
+      setAvailableDates(data);
+    } catch (err) {
+      console.error("Failed to load pickup dates", err);
+    }
+  };
 
   useEffect(() => {
     fetchMenuItems();

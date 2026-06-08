@@ -7,6 +7,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsOfService from './pages/TermsOfService'
 import Contact from './pages/Contact'
 import RefundPolicy from './pages/RefundPolicy'
+import Success from './pages/Success'
+import Cancel from './pages/Cancel'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
@@ -18,6 +20,8 @@ createRoot(document.getElementById('root')).render(
         <Route path="/terms-of-service" element={<TermsOfService />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/refund-policy" element={<RefundPolicy />} />
+        <Route path="/Success" element={<Success />} />
+        <Route path="/Cancel" element={<Cancel />} />                
       </Routes>
     </BrowserRouter>
   </StrictMode>

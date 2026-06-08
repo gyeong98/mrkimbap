@@ -126,9 +126,18 @@ app.get("/api/health", (req, res) => {
 
 app.get("/api/items", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT id, name, description, price_cents, available_quantity FROM items ORDER BY id"
-    );
+    const result = await pool.query(`
+      SELECT
+        id,
+        name,
+        description,
+        price_cents,
+        available_quantity,
+        image_url
+      FROM items
+      WHERE active = TRUE
+      ORDER BY id
+    `);
 
     res.json(result.rows);
   } catch (err) {
