@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import logo from "./assets/logo.png";
 import {
   CalendarDays,
   Loader2,
@@ -8,10 +9,10 @@ import {
   Plus,
   RefreshCw,
   ShoppingBag,
-  Utensils,
 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const TAX_RATE_PERCENT = 10;
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1644864812003-8bdb7fe8e676?q=80&w=1200&auto=format&fit=crop",
@@ -19,10 +20,6 @@ const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1609501676725-7186f017a4b7?q=80&w=1200&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1611143669185-af224c5e3252?q=80&w=1200&auto=format&fit=crop",
 ];
-
-function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
-}
 
 function formatCurrencyFromCents(cents) {
   return new Intl.NumberFormat("en-US", {
@@ -68,7 +65,7 @@ async function parseJsonResponse(response, fallbackMessage) {
 export default function App() {
   const [menuItems, setMenuItems] = useState([]);
   const [quantities, setQuantities] = useState({});
-  const [pickupDate, setPickupDate] = useState(getTodayDate());
+  const [pickupDate, setPickupDate] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
@@ -88,6 +85,12 @@ export default function App() {
   const subtotalCents = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
   }, [cartItems]);
+
+  const taxCents = useMemo(() => {
+    return Math.round((subtotalCents * TAX_RATE_PERCENT) / 100);
+  }, [subtotalCents]);
+
+  const totalCents = subtotalCents + taxCents;
 
   const totalItems = useMemo(() => {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
@@ -123,7 +126,6 @@ export default function App() {
       const data = await response.json();
 
       console.log("pickup dates:", data);
-      console.log("why is this being called twice", data);
 
       setAvailableDates(data);
     } catch (err) {
@@ -215,20 +217,18 @@ export default function App() {
       <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-stone-50/90 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-stone-50 shadow-sm">
-              <Utensils size={21} />
-            </div>
+            <img src={logo} alt="MR.KIMBAP logo" className="h-12 w-12 shrink-0 object-contain" />
             <div>
-              <p className="text-lg font-black tracking-tight">MrKimbap</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-stone-500">Fresh Korean Rolls</p>
+              <p className="text-lg font-black tracking-tight">MR.KIMBAP</p>
+              <p className="text-xs uppercase tracking-[0.25em] text-stone-500">Korean Rice Roll</p>
             </div>
           </div>
 
           <a
-            href="#order"
+            href="#menu"
             className="rounded-full bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-800"
           >
-            Order Now
+            View Menu
           </a>
         </nav>
       </header>
@@ -246,20 +246,6 @@ export default function App() {
               <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-600">
                 Choose your rolls, select quantities, pick a date, and complete checkout securely.
               </p>
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-                <a
-                  href="#order"
-                  className="rounded-full bg-stone-950 px-7 py-3.5 text-center font-bold text-white shadow-lg shadow-stone-300 transition hover:-translate-y-0.5 hover:bg-stone-800"
-                >
-                  Start Order
-                </a>
-                <a
-                  href="#menu"
-                  className="rounded-full border border-stone-300 bg-white px-7 py-3.5 text-center font-bold text-stone-800 transition hover:-translate-y-0.5 hover:border-stone-400"
-                >
-                  View Menu
-                </a>
-              </div>
             </motion.div>
 
             <motion.div
@@ -283,7 +269,13 @@ export default function App() {
             <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-stone-500">Menu</p>
-                <h2 className="mt-2 text-4xl font-black tracking-tight md:text-5xl">Choose your kimbap</h2>
+                <h2 className="mt-2 text-4xl font-black tracking-tight text-stone-950 md:text-5xl">
+                  Choose your{" "}
+                  <span className="relative inline-block text-emerald-700">
+                    <span className="relative z-10">kimbap</span>
+                    <span aria-hidden="true" className="absolute inset-x-0 bottom-1 z-0 h-3 rounded-full bg-amber-200" />
+                  </span>
+                </h2>
               </div>
 
               <button
@@ -337,9 +329,9 @@ export default function App() {
                           <p className="font-black text-stone-950">{formatCurrencyFromCents(item.priceCents)}</p>
                         </div>
                         <p className="min-h-20 text-sm leading-6 text-stone-600">{item.description}</p>
-                        <p className="mt-3 text-xs font-bold uppercase tracking-wide text-stone-400">
+                        {/* <p className="mt-3 text-xs font-bold uppercase tracking-wide text-stone-400">
                           Available: {item.availableQuantity}
-                        </p>
+                        </p> */}
 
                         <div className="mt-5 flex items-center justify-between rounded-full border border-stone-200 bg-stone-50 p-1.5">
                           <button
@@ -386,46 +378,49 @@ export default function App() {
                 </div>
               </div>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-bold text-stone-700">Pickup Date</span>
-                <select
-                  value={pickupDate}
-                  onChange={(event) => setPickupDate(event.target.value)}
-                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
-                >
-                  <option value="">Select pickup date</option>
-
-                  {availableDates.map((date) => (
-                    <option
-                      key={date.id}
-                      value={date.pickup_date}
-                    >
-                      {new Date(date.pickup_date).toLocaleDateString()}
+              <div className="space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-stone-700">Pickup Date</span>
+                  <select
+                    value={pickupDate}
+                    onChange={(event) => setPickupDate(event.target.value)}
+                    required
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                  >
+                    <option value="" disabled>
+                      Select pickup date
                     </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block mb-4">
-                <span className="mb-2 block text-sm font-bold text-stone-700">Customer Name</span>
-                <input
-                  type="text"
-                  value={customerName}
-                  onChange={(event) => setCustomerName(event.target.value)}
-                  placeholder="Enter your name"
-                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
-                />
-              </label>
 
-              <label className="block mb-4">
-                <span className="mb-2 block text-sm font-bold text-stone-700">Customer Email</span>
-                <input
-                  type="email"
-                  value={customerEmail}
-                  onChange={(event) => setCustomerEmail(event.target.value)}
-                  placeholder="Enter your email"
-                  className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
-                />
-              </label>
+                    {availableDates.map((date) => (
+                      <option key={date.id} value={date.pickup_date.slice(0, 10)}>
+                        {new Date(date.pickup_date).toLocaleDateString()}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-stone-700">Customer Name</span>
+                  <input
+                    type="text"
+                    value={customerName}
+                    onChange={(event) => setCustomerName(event.target.value)}
+                    placeholder="Enter your name"
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-stone-700">Customer Email</span>
+                  <input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(event) => setCustomerEmail(event.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="rounded-[2rem] border border-stone-200 bg-stone-950 p-6 text-white shadow-xl md:p-8">
@@ -473,6 +468,14 @@ export default function App() {
                 <div className="flex justify-between text-xl font-black">
                   <span>Subtotal</span>
                   <span>{formatCurrencyFromCents(subtotalCents)}</span>
+                </div>
+                <div className="flex justify-between text-stone-300">
+                  <span>Tax ({TAX_RATE_PERCENT}%)</span>
+                  <span className="font-bold text-white">{formatCurrencyFromCents(taxCents)}</span>
+                </div>
+                <div className="flex justify-between border-t border-white/10 pt-3 text-2xl font-black">
+                  <span>Total</span>
+                  <span>{formatCurrencyFromCents(totalCents)}</span>
                 </div>
               </div>
 

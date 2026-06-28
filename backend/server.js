@@ -7,6 +7,11 @@ const pool = require("./db");
 
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const TAX_RATE_PERCENT = 10;
+
+function calculateTaxCents(subtotalCents) {
+  return Math.round((subtotalCents * TAX_RATE_PERCENT) / 100);
+}
 
 app.use(cors());
 
@@ -151,9 +156,10 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
   try {
     const { customerName, customerEmail, pickupDate, items } = req.body;
+    const selectedPickupDate = typeof pickupDate === "string" ? pickupDate.slice(0, 10) : "";
 
-    if (!pickupDate) {
-      return res.status(400).json({ error: "Pickup date is required" });
+    if (!selectedPickupDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedPickupDate)) {
+      return res.status(400).json({ error: "Please select a pickup date." });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -166,10 +172,25 @@ app.post("/api/create-checkout-session", async (req, res) => {
       });
     }
 
+    const pickupDateResult = await client.query(
+      `
+      SELECT id
+      FROM pickup_dates
+      WHERE pickup_date = $1::date AND active = true
+      LIMIT 1
+      `,
+      [selectedPickupDate]
+    );
+
+    if (pickupDateResult.rowCount === 0) {
+      return res.status(400).json({ error: "Please select an available pickup date." });
+    }
+
     await client.query("BEGIN");
 
     const checkoutLineItems = [];
     const orderItems = [];
+    let subtotalCents = 0;
 
     for (const cartItem of items) {
       const { itemId, quantity } = cartItem;
@@ -193,6 +214,8 @@ app.post("/api/create-checkout-session", async (req, res) => {
         throw new Error(`Not enough inventory for ${item.name}`);
       }
 
+      subtotalCents += item.price_cents * quantity;
+
       checkoutLineItems.push({
         price_data: {
           currency: "usd",
@@ -212,11 +235,32 @@ app.post("/api/create-checkout-session", async (req, res) => {
       });
     }
 
+    const taxCents = calculateTaxCents(subtotalCents);
+    const totalCents = subtotalCents + taxCents;
+
+    if (taxCents > 0) {
+      checkoutLineItems.push({
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name: `Tax (${TAX_RATE_PERCENT}%)`,
+            description: "10% tax on goods",
+          },
+          unit_amount: taxCents,
+        },
+        quantity: 1,
+      });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: checkoutLineItems,
       metadata: {
-        pickup_date: pickupDate,
+        pickup_date: selectedPickupDate,
+        subtotal_cents: String(subtotalCents),
+        tax_rate_percent: String(TAX_RATE_PERCENT),
+        tax_cents: String(taxCents),
+        total_cents: String(totalCents),
       },
       success_url: `${process.env.FRONTEND_URL}/success`,
       cancel_url: `${process.env.FRONTEND_URL}/cancel`,
@@ -229,7 +273,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       VALUES ($1, 'pending', $2, $3, $4)
       RETURNING id
       `,
-      [session.id, pickupDate, customerName.trim(), customerEmail.trim()]
+      [session.id, selectedPickupDate, customerName.trim(), customerEmail.trim()]
     );
 
     const orderId = orderResult.rows[0].id;
