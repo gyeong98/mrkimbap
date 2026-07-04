@@ -40,6 +40,10 @@ function formatCurrencyFromCents(cents) {
   }).format((Number(cents) || 0) / 100);
 }
 
+function formatUnitQuantity(priceCents, quantity) {
+  return `${formatCurrencyFromCents(priceCents)} x ${quantity}`;
+}
+
 function normalizeItem(item, index) {
   return {
     itemId: item.id,
@@ -347,6 +351,7 @@ export default function App() {
       customerEmail: normalizedCustomerEmail,
       customerPhone: customerPhoneDigits,
       pickupDate,
+      pickupDateId: selectedPickupDateId,
       items: cartItems.map((item) => ({
         itemId: item.itemId,
         quantity: item.quantity,
@@ -677,13 +682,13 @@ export default function App() {
                 <div className="space-y-3">
                   {cartItems.map((item) => (
                     <div key={item.itemId} className="flex items-center justify-between gap-4 rounded-3xl bg-white/5 p-4">
-                      <div>
+                      <div className="min-w-0 text-left">
                         <p className="font-bold">{item.name}</p>
-                        <p className="text-sm text-stone-300">
-                          {formatCurrencyFromCents(item.priceCents)} × {item.quantity}
-                        </p>
+                        <p className="text-sm text-stone-300">{formatUnitQuantity(item.priceCents, item.quantity)}</p>
                       </div>
-                      <p className="font-black">{formatCurrencyFromCents(item.priceCents * item.quantity)}</p>
+                      <p className="shrink-0 text-right font-black">
+                        {formatCurrencyFromCents(item.priceCents * item.quantity)}
+                      </p>
                     </div>
                   ))}
                 </div>

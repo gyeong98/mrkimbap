@@ -10,6 +10,8 @@ const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
 const TAX_RATE_PERCENT = 9.025;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_DIGIT_COUNT = 10;
+const TWILIO_EMAIL_SEND_URL = "https://comms.twilio.com/v1/Emails";
+const TWILIO_API_BASE_URL = "https://api.twilio.com/2010-04-01";
 
 function calculateTaxCents(subtotalCents) {
   return Math.round((subtotalCents * TAX_RATE_PERCENT) / 100);
@@ -33,6 +35,10 @@ function requireAdmin(req, res, next) {
 }
 
 function normalizeDateInput(date) {
+  if (date instanceof Date && !Number.isNaN(date.getTime())) {
+    return date.toISOString().slice(0, 10);
+  }
+
   return typeof date === "string" ? date.slice(0, 10) : "";
 }
 
@@ -46,6 +52,277 @@ function getPhoneDigits(phoneNumber) {
 
 function isValidEmail(email) {
   return EMAIL_PATTERN.test(String(email || "").trim());
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (character) => {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[character];
+  });
+}
+
+function formatDateForNotification(date) {
+  const normalizedDate = normalizeDateInput(date);
+
+  if (!isIsoDate(normalizedDate)) {
+    return date || "";
+  }
+
+  const [year, month, day] = normalizedDate.split("-").map(Number);
+
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function normalizePhoneForSms(phoneNumber) {
+  const rawPhoneNumber = String(phoneNumber || "").trim();
+
+  if (/^\+\d{10,15}$/.test(rawPhoneNumber)) {
+    return rawPhoneNumber;
+  }
+
+  const digits = getPhoneDigits(rawPhoneNumber);
+
+  if (digits.length === PHONE_DIGIT_COUNT) {
+    return `+1${digits}`;
+  }
+
+  if (digits.length === PHONE_DIGIT_COUNT + 1 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+
+  return "";
+}
+
+function buildNotificationDetails(order) {
+  return {
+    orderId: order.id,
+    customerName: order.customer_name || "there",
+    customerEmail: order.customer_email || "",
+    customerPhone: order.customer_phone || "",
+    pickupDate: formatDateForNotification(order.pickup_date),
+    locationName: order.location_name || "Pickup location",
+    locationAddress: order.location_address || "Address will be shared soon.",
+    locationHours: order.location_hours || "Hours will be shared soon.",
+  };
+}
+
+function buildOrderEmail(order) {
+  const details = buildNotificationDetails(order);
+  const subject = `Your MrKimbap pickup order #${details.orderId} is confirmed`;
+  const plainText = [
+    `Hi ${details.customerName},`,
+    "",
+    "Thank you for your MrKimbap order. Your payment was received and your pickup is confirmed.",
+    "",
+    `Order ID: #${details.orderId}`,
+    `Pickup date: ${details.pickupDate}`,
+    `Location: ${details.locationName}`,
+    `Address: ${details.locationAddress}`,
+    `Hours: ${details.locationHours}`,
+    "",
+    "Freshness tip: For the freshest kimbap, we recommend arriving about 2 hours after the market opens.",
+    "",
+    "We will have your order ready for pickup. See you at the market!",
+    "",
+    "MrKimbap",
+  ].join("\n");
+
+  const html = `
+    <div style="margin:0;padding:24px;background:#fafaf9;font-family:Arial,sans-serif;color:#1c1917;">
+      <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e7e5e4;border-radius:18px;overflow:hidden;">
+        <div style="background:#047857;color:#ffffff;padding:24px;">
+          <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">MrKimbap</p>
+          <h1 style="margin:0;font-size:26px;line-height:1.2;">Your pickup order is confirmed</h1>
+        </div>
+        <div style="padding:24px;">
+          <p style="margin:0 0 16px;font-size:16px;line-height:1.6;">Hi ${escapeHtml(details.customerName)},</p>
+          <p style="margin:0 0 20px;font-size:16px;line-height:1.6;">
+            Thank you for your order. Your payment was received and your pickup is confirmed.
+          </p>
+          <div style="border:1px solid #e7e5e4;border-radius:14px;padding:16px;background:#f5f5f4;">
+            <p style="margin:0 0 10px;"><strong>Order ID:</strong> #${escapeHtml(details.orderId)}</p>
+            <p style="margin:0 0 10px;"><strong>Pickup date:</strong> ${escapeHtml(details.pickupDate)}</p>
+            <p style="margin:0 0 10px;"><strong>Location:</strong> ${escapeHtml(details.locationName)}</p>
+            <p style="margin:0 0 10px;"><strong>Address:</strong> ${escapeHtml(details.locationAddress)}</p>
+            <p style="margin:0;"><strong>Hours:</strong> ${escapeHtml(details.locationHours)}</p>
+          </div>
+          <p style="margin:20px 0 0;padding:14px 16px;border-radius:14px;background:#ecfdf5;color:#065f46;font-size:15px;line-height:1.5;">
+            Freshness tip: For the freshest kimbap, we recommend arriving about 2 hours after the market opens.
+          </p>
+          <p style="margin:20px 0 0;font-size:16px;line-height:1.6;">We will have your order ready for pickup. See you at the market!</p>
+          <p style="margin:18px 0 0;font-size:16px;font-weight:700;">MrKimbap</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return { subject, plainText, html };
+}
+
+function buildOrderSms(order) {
+  const details = buildNotificationDetails(order);
+
+  return [
+    `MrKimbap order #${details.orderId} confirmed.`,
+    `Pickup: ${details.pickupDate}.`,
+    `${details.locationName}, ${details.locationAddress}.`,
+    `Hours: ${details.locationHours}.`,
+    "Freshest about 2 hrs after market opens.",
+  ].join(" ");
+}
+
+async function sendOrderEmail(order) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromEmail = process.env.TWILIO_EMAIL_FROM_EMAIL;
+  const fromName = process.env.TWILIO_EMAIL_FROM_NAME || "MrKimbap";
+
+  if (!accountSid || !authToken || !fromEmail) {
+    console.warn("Order email skipped: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_EMAIL_FROM_EMAIL.");
+    return;
+  }
+
+  if (!order.customer_email) {
+    console.warn(`Order email skipped for order ${order.id}: missing customer email.`);
+    return;
+  }
+
+  const email = buildOrderEmail(order);
+  const response = await fetch(TWILIO_EMAIL_SEND_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: {
+        address: fromEmail,
+        name: fromName,
+      },
+      to: [
+        {
+          address: order.customer_email,
+          name: order.customer_name || undefined,
+        },
+      ],
+      content: {
+        subject: email.subject,
+        html: email.html,
+        text: email.plainText,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`Twilio email failed with ${response.status}: ${responseBody}`);
+  }
+
+  console.log(`Order confirmation email sent for order ${order.id}.`);
+}
+
+async function sendOrderText(order) {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromPhone = process.env.TWILIO_FROM_PHONE;
+  const toPhone = normalizePhoneForSms(order.customer_phone);
+
+  if (!accountSid || !authToken || !fromPhone) {
+    console.warn("Order text skipped: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_PHONE.");
+    return;
+  }
+
+  if (!toPhone) {
+    console.warn(`Order text skipped for order ${order.id}: invalid customer phone.`);
+    return;
+  }
+
+  const body = new URLSearchParams({
+    To: toPhone,
+    From: fromPhone,
+    Body: buildOrderSms(order),
+  });
+
+  const response = await fetch(`${TWILIO_API_BASE_URL}/Accounts/${accountSid}/Messages.json`, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text();
+    throw new Error(`Twilio text failed with ${response.status}: ${responseBody}`);
+  }
+
+  console.log(`Order confirmation text sent for order ${order.id}.`);
+}
+
+async function sendOrderNotifications(order) {
+  await Promise.all([
+    sendOrderEmail(order).catch((err) => {
+      console.error(`Failed to send order ${order.id} email:`, err.message);
+    }),
+    sendOrderText(order).catch((err) => {
+      console.error(`Failed to send order ${order.id} text:`, err.message);
+    }),
+  ]);
+}
+
+async function fetchOrderNotificationDetails(client, orderId, pickupDateId) {
+  const numericPickupDateId = Number(pickupDateId);
+  const selectedPickupDateId =
+    Number.isInteger(numericPickupDateId) && numericPickupDateId > 0 ? numericPickupDateId : null;
+
+  const result = await client.query(
+    `
+    SELECT
+      o.id,
+      o.pickup_date,
+      o.customer_name,
+      o.customer_email,
+      o.customer_phone,
+      COALESCE(selected_location.name, fallback_location.name) AS location_name,
+      COALESCE(selected_location.address, fallback_location.address) AS location_address,
+      COALESCE(selected_location.hours, fallback_location.hours) AS location_hours
+    FROM orders o
+    LEFT JOIN LATERAL (
+      SELECT l.name, l.address, l.hours
+      FROM pickup_dates pd
+      JOIN locations l
+        ON l.id = pd.location_id
+      WHERE pd.id = $2
+      LIMIT 1
+    ) selected_location
+      ON true
+    LEFT JOIN LATERAL (
+      SELECT l.name, l.address, l.hours
+      FROM pickup_dates pd
+      JOIN locations l
+        ON l.id = pd.location_id
+      WHERE pd.pickup_date = o.pickup_date
+      ORDER BY pd.active DESC, l.active DESC, l.name
+      LIMIT 1
+    ) fallback_location
+      ON true
+    WHERE o.id = $1
+    `,
+    [orderId, selectedPickupDateId]
+  );
+
+  return result.rows[0] || null;
 }
 
 app.use(cors());
@@ -75,15 +352,17 @@ app.post(
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
       const client = await pool.connect();
+      let paidOrderNotification = null;
 
       try {
         await client.query("BEGIN");
 
         const orderResult = await client.query(
           `
-          SELECT id
+          SELECT id, status
           FROM orders
           WHERE stripe_session_id = $1
+          FOR UPDATE
           `,
           [session.id]
         );
@@ -94,48 +373,63 @@ app.post(
           throw new Error("Order not found for Stripe session");
         }
 
-        const orderItemsResult = await client.query(
-          `
-          SELECT item_id, quantity
-          FROM order_items
-          WHERE order_id = $1
-          `,
-          [order.id]
-        );
-
-        for (const orderItem of orderItemsResult.rows) {
-          const updateResult = await client.query(
+        if (order.status === "paid") {
+          await client.query("COMMIT");
+          console.log("Stripe webhook skipped for already-paid order:", order.id);
+        } else {
+          const orderItemsResult = await client.query(
             `
-            UPDATE items
-            SET available_quantity = available_quantity - $1
-            WHERE id = $2 AND available_quantity >= $1
-            RETURNING *
+            SELECT item_id, quantity
+            FROM order_items
+            WHERE order_id = $1
             `,
-            [orderItem.quantity, orderItem.item_id]
+            [order.id]
           );
 
-          if (updateResult.rowCount === 0) {
-            throw new Error(`Not enough inventory for item ${orderItem.item_id}`);
+          for (const orderItem of orderItemsResult.rows) {
+            const updateResult = await client.query(
+              `
+              UPDATE items
+              SET available_quantity = available_quantity - $1
+              WHERE id = $2 AND available_quantity >= $1
+              RETURNING *
+              `,
+              [orderItem.quantity, orderItem.item_id]
+            );
+
+            if (updateResult.rowCount === 0) {
+              throw new Error(`Not enough inventory for item ${orderItem.item_id}`);
+            }
           }
+
+          await client.query(
+            `
+            UPDATE orders
+            SET status = 'paid'
+            WHERE id = $1
+            `,
+            [order.id]
+          );
+
+          paidOrderNotification = await fetchOrderNotificationDetails(
+            client,
+            order.id,
+            session.metadata?.pickup_date_id
+          );
+
+          await client.query("COMMIT");
+
+          console.log("Order paid and inventory reduced:", order.id);
         }
-
-        await client.query(
-          `
-          UPDATE orders
-          SET status = 'paid'
-          WHERE id = $1
-          `,
-          [order.id]
-        );
-
-        await client.query("COMMIT");
-
-        console.log("Order paid and inventory reduced:", order.id);
       } catch (err) {
         await client.query("ROLLBACK");
         console.error("Inventory update failed:", err.message);
       } finally {
         client.release();
+      }
+
+      if (paidOrderNotification) {
+        await sendOrderNotifications(paidOrderNotification);
       }
     }
 
@@ -402,14 +696,19 @@ app.post("/api/create-checkout-session", async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { customerName, customerEmail, customerPhone, pickupDate, items } = req.body;
+    const { customerName, customerEmail, customerPhone, pickupDate, pickupDateId, items } = req.body;
     const selectedPickupDate = typeof pickupDate === "string" ? pickupDate.slice(0, 10) : "";
+    const selectedPickupDateId = Number(pickupDateId);
     const normalizedCustomerName = typeof customerName === "string" ? customerName.trim() : "";
     const normalizedCustomerEmail = typeof customerEmail === "string" ? customerEmail.trim() : "";
     const customerPhoneDigits = getPhoneDigits(customerPhone);
 
     if (!selectedPickupDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedPickupDate)) {
       return res.status(400).json({ error: "Please select a pickup date." });
+    }
+
+    if (!Number.isInteger(selectedPickupDateId) || selectedPickupDateId <= 0) {
+      return res.status(400).json({ error: "Please select a valid pickup date." });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -436,14 +735,18 @@ app.post("/api/create-checkout-session", async (req, res) => {
 
     const pickupDateResult = await client.query(
       `
-      SELECT id
-      FROM pickup_dates
-      WHERE pickup_date = $1::date
-        AND pickup_date > CURRENT_DATE
-        AND active = true
+      SELECT pd.id
+      FROM pickup_dates pd
+      JOIN locations l
+        ON l.id = pd.location_id
+      WHERE pd.id = $1
+        AND pd.pickup_date = $2::date
+        AND pd.pickup_date > CURRENT_DATE
+        AND pd.active = true
+        AND l.active = true
       LIMIT 1
       `,
-      [selectedPickupDate]
+      [selectedPickupDateId, selectedPickupDate]
     );
 
     if (pickupDateResult.rowCount === 0) {
@@ -521,6 +824,7 @@ app.post("/api/create-checkout-session", async (req, res) => {
       line_items: checkoutLineItems,
       metadata: {
         pickup_date: selectedPickupDate,
+        pickup_date_id: String(selectedPickupDateId),
         subtotal_cents: String(subtotalCents),
         tax_rate_percent: String(TAX_RATE_PERCENT),
         tax_cents: String(taxCents),
