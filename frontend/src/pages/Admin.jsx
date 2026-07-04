@@ -20,6 +20,7 @@ const ORDER_SORT_OPTIONS = [
   { value: "pickup_date", label: "Pickup date" },
 ];
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const PHONE_DIGIT_COUNT = 10;
 
 function formatCurrencyFromCents(cents) {
   return new Intl.NumberFormat("en-US", {
@@ -45,6 +46,16 @@ function formatDateInputValue(date) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatPhoneNumber(phoneNumber) {
+  const digits = String(phoneNumber || "").replace(/\D/g, "");
+
+  if (digits.length !== PHONE_DIGIT_COUNT) {
+    return phoneNumber || "";
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
 function getCalendarMonthDays(monthDate) {
@@ -77,6 +88,7 @@ export default function Admin() {
   const [tokenInput, setTokenInput] = useState(adminToken);
   const [locations, setLocations] = useState([]);
   const [pickupDates, setPickupDates] = useState([]);
+  const [pickupDateLocationFilter, setPickupDateLocationFilter] = useState("all");
   const [orders, setOrders] = useState([]);
   const [newPickupDate, setNewPickupDate] = useState("");
   const [newPickupLocationId, setNewPickupLocationId] = useState("");
@@ -94,6 +106,14 @@ export default function Admin() {
   const activeLocations = useMemo(() => {
     return locations.filter((location) => location.active);
   }, [locations]);
+
+  const filteredPickupDates = useMemo(() => {
+    if (pickupDateLocationFilter === "all") {
+      return pickupDates;
+    }
+
+    return pickupDates.filter((date) => String(date.location_id) === pickupDateLocationFilter);
+  }, [pickupDateLocationFilter, pickupDates]);
 
   const stats = useMemo(() => {
     const activePickupDates = pickupDates.filter((date) => date.active).length;
@@ -177,6 +197,7 @@ export default function Admin() {
     setTokenInput("");
     setLocations([]);
     setPickupDates([]);
+    setPickupDateLocationFilter("all");
     setOrders([]);
   };
 
@@ -476,13 +497,35 @@ export default function Admin() {
           </div>
 
           <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-white">
-                <CalendarDays size={22} />
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-white">
+                  <CalendarDays size={22} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black">Pickup dates</h2>
+                  <p className="text-sm text-stone-500">Turn dates on or off for the storefront.</p>
+                </div>
               </div>
+
               <div>
-                <h2 className="text-2xl font-black">Pickup dates</h2>
-                <p className="text-sm text-stone-500">Turn dates on or off for the storefront.</p>
+                <label className="block">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-wide text-stone-500">
+                    Filter by location
+                  </span>
+                  <select
+                    value={pickupDateLocationFilter}
+                    onChange={(event) => setPickupDateLocationFilter(event.target.value)}
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm font-bold outline-none transition focus:border-stone-500 focus:bg-white md:w-64"
+                  >
+                    <option value="all">All locations</option>
+                    {locations.map((location) => (
+                      <option key={location.id} value={location.id}>
+                        {location.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </div>
 
@@ -497,7 +540,7 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 bg-white">
-                  {pickupDates.map((date) => (
+                  {filteredPickupDates.map((date) => (
                     <tr key={date.id}>
                       <td className="px-4 py-4 font-bold">{formatDate(date.pickup_date)}</td>
                       <td className="px-4 py-4">
@@ -526,7 +569,7 @@ export default function Admin() {
                     </tr>
                   ))}
 
-                  {pickupDates.length === 0 && (
+                  {filteredPickupDates.length === 0 && (
                     <tr>
                       <td colSpan="4" className="px-4 py-8 text-center text-stone-500">
                         No pickup dates found.
@@ -569,14 +612,21 @@ export default function Admin() {
           </div>
 
           <div className="overflow-x-auto rounded-2xl border border-stone-200">
-            <table className="min-w-[1100px] divide-y divide-stone-200 text-sm">
-              <thead className="bg-stone-100 text-left text-xs font-black uppercase tracking-wide text-stone-500">
+            <table className="w-full min-w-[960px] table-fixed divide-y divide-stone-200 text-sm">
+              <colgroup>
+                <col className="w-[12%]" />
+                <col className="w-[24%]" />
+                <col className="w-[28%]" />
+                <col className="w-[24%]" />
+                <col className="w-[12%]" />
+              </colgroup>
+              <thead className="bg-stone-100 text-center text-xs font-black uppercase tracking-wide text-stone-500">
                 <tr>
                   <th className="px-4 py-3">Order</th>
                   <th className="px-4 py-3">Customer</th>
                   <th className="px-4 py-3">Pickup</th>
                   <th className="px-4 py-3">Items</th>
-                  <th className="px-4 py-3 text-right">Price</th>
+                  <th className="px-4 py-3">Price</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 bg-white">
@@ -589,6 +639,9 @@ export default function Admin() {
                     <td className="px-4 py-4">
                       <p className="font-bold text-stone-950">{order.customer_name}</p>
                       <p className="text-xs text-stone-500">{order.customer_email}</p>
+                      {order.customer_phone && (
+                        <p className="text-xs text-stone-500">{formatPhoneNumber(order.customer_phone)}</p>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <p className="font-bold text-stone-950">{formatDate(order.pickup_date)}</p>

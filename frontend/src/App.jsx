@@ -14,6 +14,8 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const TAX_RATE_PERCENT = 9.025;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_DIGIT_COUNT = 10;
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1644864812003-8bdb7fe8e676?q=80&w=1200&auto=format&fit=crop",
@@ -71,6 +73,28 @@ function formatPickupDateOption(date) {
   const pickupDate = formatPickupDate(date.pickup_date);
 
   return date.location_name ? `${pickupDate} - ${date.location_name}` : pickupDate;
+}
+
+function getPhoneDigits(phoneNumber) {
+  return String(phoneNumber || "").replace(/\D/g, "").slice(0, PHONE_DIGIT_COUNT);
+}
+
+function isValidEmail(email) {
+  return EMAIL_PATTERN.test(String(email || "").trim());
+}
+
+function formatPhoneNumber(phoneNumber) {
+  const digits = getPhoneDigits(phoneNumber);
+
+  if (digits.length <= 3) {
+    return digits;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 }
 
 function buildPickupSchedule(dates) {
@@ -160,6 +184,7 @@ export default function App() {
   const [selectedPickupDateId, setSelectedPickupDateId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
   const [error, setError] = useState("");
   const [isLoadingItems, setIsLoadingItems] = useState(true);
@@ -292,19 +317,35 @@ export default function App() {
       return;
     }
 
-    if (!customerName.trim()) {
+    const normalizedCustomerName = customerName.trim();
+    const normalizedCustomerEmail = customerEmail.trim();
+
+    if (!normalizedCustomerName) {
       setError("Please enter your name.");
       return;
     }
 
-    if (!customerEmail.trim()) {
+    if (!normalizedCustomerEmail) {
       setError("Please enter your email.");
       return;
     }
 
+    if (!isValidEmail(normalizedCustomerEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    const customerPhoneDigits = getPhoneDigits(customerPhone);
+
+    if (customerPhoneDigits.length !== PHONE_DIGIT_COUNT) {
+      setError(`Please enter a ${PHONE_DIGIT_COUNT}-digit phone number.`);
+      return;
+    }
+
     const payload = {
-      customerName: customerName.trim(),
-      customerEmail: customerEmail.trim(),
+      customerName: normalizedCustomerName,
+      customerEmail: normalizedCustomerEmail,
+      customerPhone: customerPhoneDigits,
       pickupDate,
       items: cartItems.map((item) => ({
         itemId: item.itemId,
@@ -567,6 +608,14 @@ export default function App() {
                   </select>
                 </label>
 
+                <p className="text-sm font-semibold text-emerald-800">
+                  Need a same-day order? Please contact us directly at{" "}
+                  <a href="tel:1235232235" className="font-black underline decoration-emerald-300 underline-offset-4">
+                    (123) 523-2235
+                  </a>
+                  .
+                </p>
+
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold text-stone-700">Customer Name</span>
                   <input
@@ -585,6 +634,20 @@ export default function App() {
                     value={customerEmail}
                     onChange={(event) => setCustomerEmail(event.target.value)}
                     placeholder="Enter your email"
+                    className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-bold text-stone-700">Customer Phone</span>
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={customerPhone}
+                    onChange={(event) => setCustomerPhone(formatPhoneNumber(event.target.value))}
+                    placeholder="(555) 123-4567"
+                    maxLength={14}
                     className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
                   />
                 </label>

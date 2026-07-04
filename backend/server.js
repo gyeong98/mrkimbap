@@ -7,7 +7,9 @@ const pool = require("./db");
 
 const app = express();
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-const TAX_RATE_PERCENT = 10;
+const TAX_RATE_PERCENT = 9.025;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_DIGIT_COUNT = 10;
 
 function calculateTaxCents(subtotalCents) {
   return Math.round((subtotalCents * TAX_RATE_PERCENT) / 100);
@@ -36,6 +38,14 @@ function normalizeDateInput(date) {
 
 function isIsoDate(date) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
+function getPhoneDigits(phoneNumber) {
+  return String(phoneNumber || "").replace(/\D/g, "");
+}
+
+function isValidEmail(email) {
+  return EMAIL_PATTERN.test(String(email || "").trim());
 }
 
 app.use(cors());
@@ -322,6 +332,7 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
         o.pickup_date,
         o.customer_name,
         o.customer_email,
+        o.customer_phone,
         COALESCE(SUM(oi.quantity), 0)::int AS item_count,
         COALESCE(SUM(oi.quantity * oi.price_cents), 0)::int AS subtotal_cents,
         pickup_location.name AS location_name,
@@ -361,6 +372,7 @@ app.get("/api/admin/orders", requireAdmin, async (req, res) => {
         o.pickup_date,
         o.customer_name,
         o.customer_email,
+        o.customer_phone,
         pickup_location.name,
         pickup_location.address,
         pickup_location.hours
@@ -390,8 +402,11 @@ app.post("/api/create-checkout-session", async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const { customerName, customerEmail, pickupDate, items } = req.body;
+    const { customerName, customerEmail, customerPhone, pickupDate, items } = req.body;
     const selectedPickupDate = typeof pickupDate === "string" ? pickupDate.slice(0, 10) : "";
+    const normalizedCustomerName = typeof customerName === "string" ? customerName.trim() : "";
+    const normalizedCustomerEmail = typeof customerEmail === "string" ? customerEmail.trim() : "";
+    const customerPhoneDigits = getPhoneDigits(customerPhone);
 
     if (!selectedPickupDate || !/^\d{4}-\d{2}-\d{2}$/.test(selectedPickupDate)) {
       return res.status(400).json({ error: "Please select a pickup date." });
@@ -401,9 +416,21 @@ app.post("/api/create-checkout-session", async (req, res) => {
       return res.status(400).json({ error: "Items are required" });
     }
 
-    if (!customerName || !customerEmail) {
+    if (!normalizedCustomerName || !normalizedCustomerEmail) {
       return res.status(400).json({
         error: "Customer name and email are required",
+      });
+    }
+
+    if (!isValidEmail(normalizedCustomerEmail)) {
+      return res.status(400).json({
+        error: "Please enter a valid email address.",
+      });
+    }
+
+    if (customerPhoneDigits.length !== PHONE_DIGIT_COUNT) {
+      return res.status(400).json({
+        error: `Customer phone must be ${PHONE_DIGIT_COUNT} digits`,
       });
     }
 
@@ -506,11 +533,11 @@ app.post("/api/create-checkout-session", async (req, res) => {
     const orderResult = await client.query(
       `
       INSERT INTO orders 
-      (stripe_session_id, status, pickup_date, customer_name, customer_email)
-      VALUES ($1, 'pending', $2, $3, $4)
+      (stripe_session_id, status, pickup_date, customer_name, customer_email, customer_phone)
+      VALUES ($1, 'pending', $2, $3, $4, $5)
       RETURNING id
       `,
-      [session.id, selectedPickupDate, customerName.trim(), customerEmail.trim()]
+      [session.id, selectedPickupDate, normalizedCustomerName, normalizedCustomerEmail, customerPhoneDigits]
     );
 
     const orderId = orderResult.rows[0].id;
