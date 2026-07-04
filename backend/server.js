@@ -13,6 +13,31 @@ function calculateTaxCents(subtotalCents) {
   return Math.round((subtotalCents * TAX_RATE_PERCENT) / 100);
 }
 
+function requireAdmin(req, res, next) {
+  const adminToken = process.env.ADMIN_TOKEN;
+
+  if (!adminToken) {
+    return res.status(503).json({
+      error: "Admin access is not configured",
+      details: "Set ADMIN_TOKEN in the backend environment to enable admin endpoints.",
+    });
+  }
+
+  if (req.get("x-admin-token") !== adminToken) {
+    return res.status(401).json({ error: "Invalid admin token" });
+  }
+
+  return next();
+}
+
+function normalizeDateInput(date) {
+  return typeof date === "string" ? date.slice(0, 10) : "";
+}
+
+function isIsoDate(date) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
 app.use(cors());
 
 // Stripe webhook must be BEFORE express.json()
@@ -148,6 +173,216 @@ app.get("/api/items", async (req, res) => {
   } catch (err) {
     console.error("Failed to fetch items:", err);
     res.status(500).json({ error: "Failed to fetch items" });
+  }
+});
+
+app.get("/api/admin/locations", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT id, name, address, hours, active
+      FROM locations
+      ORDER BY active DESC, name
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch admin locations:", err);
+    res.status(500).json({ error: "Failed to fetch locations" });
+  }
+});
+
+app.get("/api/admin/pickup-dates", requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        pd.id,
+        pd.pickup_date,
+        pd.active,
+        pd.location_id,
+        l.name AS location_name,
+        l.address AS location_address,
+        l.hours AS location_hours,
+        l.active AS location_active
+      FROM pickup_dates pd
+      LEFT JOIN locations l
+        ON l.id = pd.location_id
+      ORDER BY pd.pickup_date DESC, l.name
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Failed to fetch admin pickup dates:", err);
+    res.status(500).json({ error: "Failed to fetch pickup dates" });
+  }
+});
+
+app.post("/api/admin/pickup-dates", requireAdmin, async (req, res) => {
+  try {
+    const pickupDate = normalizeDateInput(req.body.pickupDate);
+    const locationId = Number(req.body.locationId);
+    const active = req.body.active !== false;
+
+    if (!isIsoDate(pickupDate)) {
+      return res.status(400).json({ error: "Pickup date must use YYYY-MM-DD format." });
+    }
+
+    if (!Number.isInteger(locationId) || locationId <= 0) {
+      return res.status(400).json({ error: "Please choose a valid location." });
+    }
+
+    const locationResult = await pool.query(
+      `
+      SELECT id
+      FROM locations
+      WHERE id = $1 AND active = true
+      `,
+      [locationId]
+    );
+
+    if (locationResult.rowCount === 0) {
+      return res.status(400).json({ error: "Please choose an active location." });
+    }
+
+    const existingResult = await pool.query(
+      `
+      SELECT id
+      FROM pickup_dates
+      WHERE pickup_date = $1::date AND location_id = $2
+      LIMIT 1
+      `,
+      [pickupDate, locationId]
+    );
+
+    if (existingResult.rowCount > 0) {
+      return res.status(409).json({ error: "That pickup date already exists for this location." });
+    }
+
+    const insertResult = await pool.query(
+      `
+      INSERT INTO pickup_dates (pickup_date, location_id, active)
+      VALUES ($1::date, $2, $3)
+      RETURNING id, pickup_date, location_id, active
+      `,
+      [pickupDate, locationId, active]
+    );
+
+    res.status(201).json(insertResult.rows[0]);
+  } catch (err) {
+    console.error("Failed to create pickup date:", err);
+    res.status(500).json({ error: "Failed to create pickup date" });
+  }
+});
+
+app.patch("/api/admin/pickup-dates/:id", requireAdmin, async (req, res) => {
+  try {
+    const pickupDateId = Number(req.params.id);
+    const active = req.body.active;
+
+    if (!Number.isInteger(pickupDateId) || pickupDateId <= 0) {
+      return res.status(400).json({ error: "Invalid pickup date id." });
+    }
+
+    if (typeof active !== "boolean") {
+      return res.status(400).json({ error: "Active must be true or false." });
+    }
+
+    const result = await pool.query(
+      `
+      UPDATE pickup_dates
+      SET active = $1
+      WHERE id = $2
+      RETURNING id, pickup_date, location_id, active
+      `,
+      [active, pickupDateId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Pickup date not found." });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("Failed to update pickup date:", err);
+    res.status(500).json({ error: "Failed to update pickup date" });
+  }
+});
+
+app.get("/api/admin/orders", requireAdmin, async (req, res) => {
+  try {
+    const orderSort = req.query.sort === "pickup_date" ? "pickup_date" : "order_id";
+    const orderByClause =
+      orderSort === "pickup_date"
+        ? "ORDER BY o.pickup_date DESC, o.id DESC"
+        : "ORDER BY o.id DESC";
+
+    const result = await pool.query(`
+      SELECT
+        o.id,
+        o.status,
+        o.pickup_date,
+        o.customer_name,
+        o.customer_email,
+        COALESCE(SUM(oi.quantity), 0)::int AS item_count,
+        COALESCE(SUM(oi.quantity * oi.price_cents), 0)::int AS subtotal_cents,
+        pickup_location.name AS location_name,
+        pickup_location.address AS location_address,
+        pickup_location.hours AS location_hours,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'itemId', i.id,
+              'name', i.name,
+              'quantity', oi.quantity,
+              'priceCents', oi.price_cents,
+              'lineTotalCents', oi.quantity * oi.price_cents
+            )
+            ORDER BY i.name
+          ) FILTER (WHERE oi.item_id IS NOT NULL),
+          '[]'
+        ) AS items
+      FROM orders o
+      LEFT JOIN order_items oi
+        ON oi.order_id = o.id
+      LEFT JOIN items i
+        ON i.id = oi.item_id
+      LEFT JOIN LATERAL (
+        SELECT l.name, l.address, l.hours
+        FROM pickup_dates pd
+        JOIN locations l
+          ON l.id = pd.location_id
+        WHERE pd.pickup_date = o.pickup_date
+        ORDER BY pd.active DESC, l.active DESC, l.name
+        LIMIT 1
+      ) pickup_location
+        ON true
+      GROUP BY
+        o.id,
+        o.status,
+        o.pickup_date,
+        o.customer_name,
+        o.customer_email,
+        pickup_location.name,
+        pickup_location.address,
+        pickup_location.hours
+      ${orderByClause}
+    `);
+
+    const orders = result.rows.map((order) => {
+      const subtotalCents = Number(order.subtotal_cents) || 0;
+      const taxCents = calculateTaxCents(subtotalCents);
+
+      return {
+        ...order,
+        subtotal_cents: subtotalCents,
+        tax_cents: taxCents,
+        total_cents: subtotalCents + taxCents,
+      };
+    });
+
+    res.json(orders);
+  } catch (err) {
+    console.error("Failed to fetch admin orders:", err);
+    res.status(500).json({ error: "Failed to fetch orders" });
   }
 });
 

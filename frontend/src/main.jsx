@@ -9,6 +9,7 @@ import Contact from './pages/Contact'
 import RefundPolicy from './pages/RefundPolicy'
 import Success from './pages/Success'
 import Cancel from './pages/Cancel'
+import Admin from './pages/Admin'
 import './index.css'
 
 createRoot(document.getElementById('root')).render(
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/refund-policy" element={<RefundPolicy />} />
         <Route path="/Success" element={<Success />} />
         <Route path="/Cancel" element={<Cancel />} />                
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
