@@ -176,7 +176,9 @@ app.post("/api/create-checkout-session", async (req, res) => {
       `
       SELECT id
       FROM pickup_dates
-      WHERE pickup_date = $1::date AND active = true
+      WHERE pickup_date = $1::date
+        AND pickup_date > CURRENT_DATE
+        AND active = true
       LIMIT 1
       `,
       [selectedPickupDate]
@@ -320,10 +322,20 @@ app.listen(PORT, () => {
 app.get("/api/pickup-dates", async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT id, pickup_date
-      FROM pickup_dates
-      WHERE active = true
-      ORDER BY pickup_date
+      SELECT
+        pd.id,
+        pd.pickup_date,
+        pd.location_id,
+        l.name AS location_name,
+        l.address AS location_address,
+        l.hours AS location_hours
+      FROM pickup_dates pd
+      JOIN locations l
+        ON l.id = pd.location_id
+      WHERE pd.active = true
+        AND pd.pickup_date > CURRENT_DATE
+        AND l.active = true
+      ORDER BY pd.pickup_date, l.name
     `);
 
     res.json(result.rows);

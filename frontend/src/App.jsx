@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import logo from "./assets/logo.png";
+import logo from "./assets/logo-transparent.png";
+import frontPicture from "./assets/frontpicture.jpg";
 import {
   CalendarDays,
   Loader2,
@@ -12,13 +13,22 @@ import {
 } from "lucide-react";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
-const TAX_RATE_PERCENT = 10;
+const TAX_RATE_PERCENT = 9.025;
 
 const FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1644864812003-8bdb7fe8e676?q=80&w=1200&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?q=80&w=1200&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1609501676725-7186f017a4b7?q=80&w=1200&auto=format&fit=crop",
   "https://images.unsplash.com/photo-1611143669185-af224c5e3252?q=80&w=1200&auto=format&fit=crop",
+];
+
+const MARKET_ACCENT_CLASSES = [
+  "border-emerald-700",
+  "border-amber-500",
+  "border-rose-500",
+  "border-sky-600",
+  "border-violet-600",
+  "border-lime-600",
 ];
 
 function formatCurrencyFromCents(cents) {
@@ -38,6 +48,87 @@ function normalizeItem(item, index) {
     image: item.image_url || FALLBACK_IMAGES[index % FALLBACK_IMAGES.length],
     tag: index === 0 ? "Best Seller" : index === 1 ? "Popular" : "Fresh",
   };
+}
+
+function normalizePickupDate(dateString) {
+  const normalizedDate = typeof dateString === "string" ? dateString.slice(0, 10) : "";
+
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalizedDate) ? normalizedDate : "";
+}
+
+function formatPickupDate(dateString) {
+  const normalizedDate = normalizePickupDate(dateString);
+
+  if (!normalizedDate) {
+    return dateString || "";
+  }
+
+  const [year, month, day] = normalizedDate.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString();
+}
+
+function formatPickupDateOption(date) {
+  const pickupDate = formatPickupDate(date.pickup_date);
+
+  return date.location_name ? `${pickupDate} - ${date.location_name}` : pickupDate;
+}
+
+function buildPickupSchedule(dates) {
+  const scheduleByLocation = new Map();
+
+  dates.forEach((date) => {
+    const normalizedDate = normalizePickupDate(date.pickup_date);
+
+    if (!normalizedDate) {
+      return;
+    }
+
+    const [year, month, day] = normalizedDate.split("-").map(Number);
+    const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+    const monthName = new Date(year, month - 1, day).toLocaleDateString(undefined, {
+      month: "long",
+    });
+    const locationName = date.location_name || "Pickup location";
+    const locationAddress = date.location_address || "";
+    const locationHours = date.location_hours || "";
+
+    if (!scheduleByLocation.has(locationName)) {
+      scheduleByLocation.set(locationName, {
+        locationName,
+        locationAddress,
+        locationHours,
+        months: new Map(),
+      });
+    }
+
+    const locationSchedule = scheduleByLocation.get(locationName);
+
+    if (!locationSchedule.locationAddress && locationAddress) {
+      locationSchedule.locationAddress = locationAddress;
+    }
+
+    if (!locationSchedule.locationHours && locationHours) {
+      locationSchedule.locationHours = locationHours;
+    }
+
+    if (!locationSchedule.months.has(monthKey)) {
+      locationSchedule.months.set(monthKey, {
+        monthKey,
+        monthName,
+        days: [],
+      });
+    }
+
+    locationSchedule.months.get(monthKey).days.push(day);
+  });
+
+  return Array.from(scheduleByLocation.values()).map((locationSchedule) => ({
+    ...locationSchedule,
+    months: Array.from(locationSchedule.months.values()).map((monthSchedule) => ({
+      ...monthSchedule,
+      days: Array.from(new Set(monthSchedule.days)).sort((a, b) => a - b),
+    })),
+  }));
 }
 
 async function parseJsonResponse(response, fallbackMessage) {
@@ -66,11 +157,13 @@ export default function App() {
   const [menuItems, setMenuItems] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [pickupDate, setPickupDate] = useState("");
+  const [selectedPickupDateId, setSelectedPickupDateId] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [availableDates, setAvailableDates] = useState([]);
   const [error, setError] = useState("");
   const [isLoadingItems, setIsLoadingItems] = useState(true);
+  const [isLoadingPickupDates, setIsLoadingPickupDates] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const cartItems = useMemo(() => {
@@ -96,6 +189,27 @@ export default function App() {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
   }, [cartItems]);
 
+  const pickupSchedule = useMemo(() => {
+    return buildPickupSchedule(availableDates);
+  }, [availableDates]);
+
+  const selectedPickupDate = useMemo(() => {
+    return availableDates.find((date) => String(date.id) === selectedPickupDateId);
+  }, [availableDates, selectedPickupDateId]);
+
+  const pickupSummaryDetails = useMemo(() => {
+    if (!selectedPickupDate) {
+      return null;
+    }
+
+    return {
+      date: formatPickupDate(selectedPickupDate.pickup_date),
+      locationName: selectedPickupDate.location_name || "",
+      locationAddress: selectedPickupDate.location_address || "",
+      locationHours: selectedPickupDate.location_hours || "",
+    };
+  }, [selectedPickupDate]);
+
   const fetchMenuItems = async () => {
     setError("");
     setIsLoadingItems(true);
@@ -118,18 +232,22 @@ export default function App() {
   };
 
   const fetchAvailableDates = async () => {
+    setIsLoadingPickupDates(true);
+
     try {
       const response = await fetch(
         `${API_BASE_URL}/api/pickup-dates`
       );
 
-      const data = await response.json();
+      const data = await parseJsonResponse(response, "Failed to load pickup dates.");
 
       console.log("pickup dates:", data);
 
       setAvailableDates(data);
     } catch (err) {
       console.error("Failed to load pickup dates", err);
+    } finally {
+      setIsLoadingPickupDates(false);
     }
   };
 
@@ -146,6 +264,14 @@ export default function App() {
       ...current,
       [item.itemId]: cappedQuantity,
     }));
+  };
+
+  const handlePickupDateChange = (event) => {
+    const nextPickupDateId = event.target.value;
+    const nextPickupDate = availableDates.find((date) => String(date.id) === nextPickupDateId);
+
+    setSelectedPickupDateId(nextPickupDateId);
+    setPickupDate(nextPickupDate ? normalizePickupDate(nextPickupDate.pickup_date) : "");
   };
 
   const handleCheckout = async () => {
@@ -237,29 +363,71 @@ export default function App() {
         <section className="w-full bg-stone-50">
           <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-16 md:grid-cols-[1.05fr_0.95fr] md:px-8 md:py-24">
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <p className="mb-5 inline-flex rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-semibold text-stone-600 shadow-sm">
-                Made fresh for pickup
-              </p>
-              <h1 className="max-w-3xl text-5xl font-black tracking-tight text-stone-950 md:text-7xl">
-                Korean kimbap, prepared fresh for your pickup date.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-stone-600">
-                Choose your rolls, select quantities, pick a date, and complete checkout securely.
-              </p>
+              {/* <h1 className="max-w-3xl text-5xl font-black tracking-tight text-stone-950 md:text-7xl">
+                Fresh Korean kimbap at the market.
+              </h1> */}
+              <div className="mt-8 max-w-2xl border-y border-stone-200 py-6">
+                <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">Upcoming pickups</p>
+
+                {isLoadingPickupDates ? (
+                  <p className="mt-4 text-lg leading-8 text-stone-600">Loading pickup dates...</p>
+                ) : pickupSchedule.length > 0 ? (
+                  <div className="mt-5 space-y-6">
+                    {pickupSchedule.map((locationSchedule, index) => (
+                      <section
+                        key={locationSchedule.locationName}
+                        className={`border-l-4 ${MARKET_ACCENT_CLASSES[index % MARKET_ACCENT_CLASSES.length]} pl-5`}
+                      >
+                        <h2 className="text-2xl font-black tracking-tight text-stone-950">
+                          {locationSchedule.locationName}
+                        </h2>
+                        {locationSchedule.locationAddress && (
+                          <p className="mt-1 text-sm font-semibold text-stone-600">
+                            {locationSchedule.locationAddress}
+                          </p>
+                        )}
+                        {locationSchedule.locationHours && (
+                          <p className="mt-1 text-sm font-bold text-stone-500">{locationSchedule.locationHours}</p>
+                        )}
+                        <dl className="mt-3 space-y-2 text-lg leading-7 text-stone-700">
+                          {locationSchedule.months.map((monthSchedule) => (
+                            <div key={monthSchedule.monthKey} className="flex flex-wrap gap-x-3">
+                              <dt className="font-black text-stone-950">{monthSchedule.monthName}:</dt>
+                              <dd>{monthSchedule.days.join(", ")}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-4 text-lg leading-8 text-stone-600">Upcoming market dates will be posted soon.</p>
+                )}
+              </div>
+              {/* <a
+                href="#menu"
+                className="mt-8 inline-flex rounded-full bg-stone-950 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-800"
+              >
+                Order for pickup
+              </a> */}
             </motion.div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="relative"
+              className="relative flex justify-center"
             >
-              <div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-amber-200 via-orange-100 to-stone-200 blur-2xl" />
-              <img
-                src="https://images.unsplash.com/photo-1609501676725-7186f017a4b7?q=80&w=1400&auto=format&fit=crop"
-                alt="Fresh Korean kimbap rolls"
-                className="relative h-[460px] w-full rounded-[2.5rem] object-cover shadow-2xl"
-              />
+              <div className="relative w-full max-w-[380px] sm:max-w-[420px] md:max-w-[440px]">
+                <div className="absolute -inset-5 rounded-[2.5rem] bg-gradient-to-br from-amber-200 via-orange-100 to-stone-200 blur-2xl" />
+                <img
+                  src={frontPicture}
+                  alt="Fresh Korean kimbap rolls"
+                  width="1290"
+                  height="2293"
+                  className="relative aspect-[1290/2293] w-full rounded-[2.5rem] object-cover shadow-2xl"
+                />
+              </div>
             </motion.div>
           </div>
         </section>
@@ -278,14 +446,14 @@ export default function App() {
                 </h2>
               </div>
 
-              <button
+              {/* <button
                 type="button"
                 onClick={fetchMenuItems}
                 className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-bold text-stone-800 transition hover:-translate-y-0.5 hover:border-stone-400"
               >
                 <RefreshCw size={16} />
                 Refresh Menu
-              </button>
+              </button> */}
             </div>
 
             {isLoadingItems ? (
@@ -310,9 +478,9 @@ export default function App() {
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
                       transition={{ duration: 0.45, delay: index * 0.05 }}
-                      className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                      className="flex h-full flex-col overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
                     >
-                      <div className="relative h-56 overflow-hidden">
+                      <div className="relative h-56 shrink-0 overflow-hidden">
                         <img
                           src={item.image}
                           alt={item.name}
@@ -323,17 +491,17 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div className="p-5">
+                      <div className="flex flex-1 flex-col p-5">
                         <div className="mb-3 flex items-start justify-between gap-3">
                           <h3 className="text-xl font-black">{item.name}</h3>
                           <p className="font-black text-stone-950">{formatCurrencyFromCents(item.priceCents)}</p>
                         </div>
-                        <p className="min-h-20 text-sm leading-6 text-stone-600">{item.description}</p>
+                        <p className="mb-5 text-sm leading-6 text-stone-600">{item.description}</p>
                         {/* <p className="mt-3 text-xs font-bold uppercase tracking-wide text-stone-400">
                           Available: {item.availableQuantity}
                         </p> */}
 
-                        <div className="mt-5 flex items-center justify-between rounded-full border border-stone-200 bg-stone-50 p-1.5">
+                        <div className="mt-auto flex items-center justify-between rounded-full border border-stone-200 bg-stone-50 p-1.5">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item, quantity - 1)}
@@ -367,14 +535,14 @@ export default function App() {
 
         <section id="order" className="w-full bg-stone-50 py-16 md:py-24">
           <div className="mx-auto grid max-w-7xl gap-8 px-5 md:grid-cols-[0.95fr_1.05fr] md:px-8">
-            <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm md:p-8">
+            <div className="rounded-[2rem] border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm md:p-8">
               <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-100 text-stone-700">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-sm">
                   <CalendarDays size={22} />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black">Pickup details</h2>
-                  <p className="text-sm text-stone-500">Required before checkout</p>
+                  <h2 className="text-2xl font-black text-emerald-950">Pickup details</h2>
+                  <p className="text-sm font-semibold text-emerald-700">Required before checkout</p>
                 </div>
               </div>
 
@@ -382,8 +550,8 @@ export default function App() {
                 <label className="block">
                   <span className="mb-2 block text-sm font-bold text-stone-700">Pickup Date</span>
                   <select
-                    value={pickupDate}
-                    onChange={(event) => setPickupDate(event.target.value)}
+                    value={selectedPickupDateId}
+                    onChange={handlePickupDateChange}
                     required
                     className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 font-semibold outline-none transition focus:border-stone-500 focus:bg-white"
                   >
@@ -392,8 +560,8 @@ export default function App() {
                     </option>
 
                     {availableDates.map((date) => (
-                      <option key={date.id} value={date.pickup_date.slice(0, 10)}>
-                        {new Date(date.pickup_date).toLocaleDateString()}
+                      <option key={date.id} value={date.id}>
+                        {formatPickupDateOption(date)}
                       </option>
                     ))}
                   </select>
@@ -463,7 +631,26 @@ export default function App() {
               <div className="space-y-3">
                 <div className="flex justify-between text-stone-300">
                   <span>Pickup date</span>
-                  <span className="font-bold text-white">{pickupDate || "Not selected"}</span>
+                  {pickupSummaryDetails ? (
+                    <span className="text-right font-bold text-white">
+                      <span className="block">{pickupSummaryDetails.date}</span>
+                      {pickupSummaryDetails.locationName && (
+                        <span className="block text-sm text-stone-200">{pickupSummaryDetails.locationName}</span>
+                      )}
+                      {pickupSummaryDetails.locationAddress && (
+                        <span className="block text-sm font-semibold text-stone-300">
+                          {pickupSummaryDetails.locationAddress}
+                        </span>
+                      )}
+                      {pickupSummaryDetails.locationHours && (
+                        <span className="block text-sm font-semibold text-stone-300">
+                          {pickupSummaryDetails.locationHours}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="font-bold text-white">Not selected</span>
+                  )}
                 </div>
                 <div className="flex justify-between text-xl font-black">
                   <span>Subtotal</span>
