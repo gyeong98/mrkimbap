@@ -403,7 +403,7 @@ export default function App() {
                     {pickupSchedule.map((locationSchedule, index) => (
                       <section
                         key={locationSchedule.locationName}
-                        className={`mx-auto w-fit border-l-4 ${MARKET_ACCENT_CLASSES[index % MARKET_ACCENT_CLASSES.length]} px-5`}
+                        className={`border-l-4 ${MARKET_ACCENT_CLASSES[index % MARKET_ACCENT_CLASSES.length]} pl-5`}
                       >
                         <h2 className="text-2xl font-black tracking-tight text-stone-950">
                           {locationSchedule.locationName}
