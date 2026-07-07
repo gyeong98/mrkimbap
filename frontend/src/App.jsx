@@ -393,7 +393,7 @@ export default function App() {
               {/* <h1 className="max-w-3xl text-5xl font-black tracking-tight text-stone-950 md:text-7xl">
                 Fresh Korean kimbap at the market.
               </h1> */}
-              <div className="mt-8 max-w-2xl border-y border-stone-200 py-6">
+              <div className="mx-auto mt-8 max-w-2xl border-y border-stone-200 py-6 text-center">
                 <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">Upcoming pickups</p>
 
                 {isLoadingPickupDates ? (
@@ -403,7 +403,7 @@ export default function App() {
                     {pickupSchedule.map((locationSchedule, index) => (
                       <section
                         key={locationSchedule.locationName}
-                        className={`border-l-4 ${MARKET_ACCENT_CLASSES[index % MARKET_ACCENT_CLASSES.length]} pl-5`}
+                        className={`mx-auto w-fit border-l-4 ${MARKET_ACCENT_CLASSES[index % MARKET_ACCENT_CLASSES.length]} px-5`}
                       >
                         <h2 className="text-2xl font-black tracking-tight text-stone-950">
                           {locationSchedule.locationName}
@@ -418,7 +418,7 @@ export default function App() {
                         )}
                         <dl className="mt-3 space-y-2 text-lg leading-7 text-stone-700">
                           {locationSchedule.months.map((monthSchedule) => (
-                            <div key={monthSchedule.monthKey} className="flex flex-wrap gap-x-3">
+                            <div key={monthSchedule.monthKey} className="flex flex-wrap justify-center gap-x-3">
                               <dt className="font-black text-stone-950">{monthSchedule.monthName}:</dt>
                               <dd>{monthSchedule.days.join(", ")}</dd>
                             </div>
