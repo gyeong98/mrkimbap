@@ -615,8 +615,8 @@ export default function App() {
 
                 <p className="text-sm font-semibold text-emerald-800">
                   Need a same-day order? Please contact us directly at{" "}
-                  <a href="tel:1235232235" className="font-black underline decoration-emerald-300 underline-offset-4">
-                    (123) 523-2235
+                  <a href="tel:6129192645" className="font-black underline decoration-emerald-300 underline-offset-4">
+                    (612) 919-2645
                   </a>
                   .
                 </p>
