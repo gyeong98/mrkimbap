@@ -1,14 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import logo from "./assets/logo-transparent.png";
 import frontPicture from "./assets/frontpicture.jpg";
+import { SiteFooter, SiteHeader } from "./pages/PageLayout";
 import {
   CalendarDays,
   Loader2,
   Minus,
   Plus,
-  RefreshCw,
   ShoppingBag,
 } from "lucide-react";
 
@@ -385,25 +383,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full overflow-x-hidden bg-stone-50 text-stone-950">
-      <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-stone-50/90 backdrop-blur-xl">
-        <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 md:px-8">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="MR.KIMBAP logo" className="h-12 w-12 shrink-0 object-contain" />
-            <div>
-              <p className="text-lg font-black tracking-tight">MR.KIMBAP</p>
-              <p className="text-xs uppercase tracking-[0.25em] text-stone-500">Korean Rice Roll</p>
-            </div>
-          </div>
-
-          <a
-            href="#menu"
-            className="rounded-full bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-stone-800"
-          >
-            View Menu
-          </a>
-        </nav>
-      </header>
+    <div className="min-h-screen w-full overflow-x-clip bg-stone-50 text-left text-stone-950">
+      <SiteHeader />
 
       <main className="w-full">
         <section className="w-full bg-stone-50">
@@ -478,7 +459,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="menu" className="w-full bg-white py-16">
+        <section id="menu" className="w-full scroll-mt-24 bg-white py-16">
           <div className="mx-auto max-w-7xl px-5 md:px-8">
             <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
@@ -760,27 +741,7 @@ export default function App() {
         </section>
       </main>
 
-      <footer className="w-full border-t border-stone-200 bg-white">
-        <div className="mx-auto max-w-7xl px-5 py-8 md:px-8">
-
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <p className="text-sm text-stone-500">
-              © {new Date().getFullYear()} MrKimbap. All rights reserved.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-6 text-sm">
-              <Link to="/privacy-policy">Privacy Policy</Link>
-
-              <Link to="/terms-of-service">Terms of Service</Link>      
-
-              <Link to="/contact">Contact</Link>
-
-              <Link to="/refund-policy">Refund Policy</Link>
-            </div>
-          </div>
-
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
