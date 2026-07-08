@@ -50,7 +50,7 @@ export default function TermsOfService() {
         <PolicySection title="Refunds and cancellations">
           <p>
             Refund and cancellation requests are handled under our{" "}
-            <Link to="/refund-policy" className="font-bold text-emerald-700 underline decoration-emerald-300 underline-offset-4">
+            <Link to="/refund-policy" className="font-bold text-forest-500 underline decoration-gold underline-offset-4">
               Refund Policy
             </Link>
             . Because orders are fresh food prepared for a specific pickup date, missed pickups and late cancellations may not be refundable.

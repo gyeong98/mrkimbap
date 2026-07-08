@@ -28,10 +28,10 @@ export default function Contact() {
       description="For the fastest response, reach out by phone with your name, pickup date, and order number if available."
       aside={
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">Fastest contact</p>
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-forest-500">Fastest contact</p>
           <a
             href={CONTACT_PHONE_HREF}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800"
+            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-cream-100 transition hover:bg-forest-600"
           >
             <Phone size={16} />
             {CONTACT_PHONE_DISPLAY}
@@ -41,34 +41,40 @@ export default function Contact() {
     >
       <div className="grid gap-6 md:grid-cols-3">
         {helpTopics.map(({ title, text, Icon }) => (
-          <article key={title} className="rounded-lg border border-stone-200 bg-stone-50 p-6 shadow-sm">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-700 text-white">
+          <article key={title} className="rounded-4xl border border-ink/10 bg-cream p-6 shadow-soft">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest text-cream-100">
               <Icon size={21} />
             </div>
-            <h2 className="mt-5 text-2xl font-black tracking-tight text-stone-950">{title}</h2>
-            <p className="mt-3 leading-7 text-stone-600">{text}</p>
+            <h2 className="mt-5 font-serif text-2xl font-black tracking-tight text-ink">{title}</h2>
+            <p className="mt-3 leading-7 text-ink-soft">{text}</p>
           </article>
         ))}
       </div>
 
-      <section className="mt-8 rounded-lg border border-stone-200 bg-white p-6 shadow-sm md:p-8">
-        <h2 className="text-2xl font-black tracking-tight text-stone-950">Before you message</h2>
-        <div className="mt-4 space-y-3 text-base leading-7 text-stone-700">
-          <p>For order support, include the name used at checkout, the selected pickup date, and the best phone number for a reply.</p>
-          <p>For same-day order requests, call or text first so we can confirm availability before you head to the market.</p>
+      <section className="mt-8 rounded-4xl border border-ink/10 bg-cream-100 p-6 shadow-soft md:p-10">
+        <h2 className="font-serif text-2xl font-black tracking-tight text-ink">Before you message</h2>
+        <div className="mt-4 space-y-3 text-base leading-7 text-ink-soft">
+          <p>
+            For order support, include the name used at checkout, the selected pickup date, and the best
+            phone number for a reply.
+          </p>
+          <p>
+            For same-day order requests, call or text first so we can confirm availability before you head
+            to the market.
+          </p>
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <a
             href={CONTACT_PHONE_HREF}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-950 px-5 py-3 text-sm font-black text-white transition hover:bg-stone-800"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream-100 transition hover:bg-forest-600"
           >
             <Phone size={16} />
             Call or text
           </a>
           <Link
             to="/#menu"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-300 bg-white px-5 py-3 text-sm font-black text-stone-900 transition hover:border-stone-400 hover:bg-stone-50"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-cream px-5 py-3 text-sm font-bold text-ink transition hover:border-ink/25"
           >
             <ShoppingBag size={16} />
             Order pickup

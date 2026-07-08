@@ -8,10 +8,10 @@ export const CONTACT_PHONE_HREF = "tel:6129192645";
 export const LAST_UPDATED = "July 7, 2026";
 
 const toneClasses = {
-  emerald: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  amber: "border-amber-200 bg-amber-50 text-amber-800",
-  rose: "border-rose-200 bg-rose-50 text-rose-800",
-  sky: "border-sky-200 bg-sky-50 text-sky-800",
+  emerald: "border-forest-400/40 bg-forest/5 text-forest",
+  amber: "border-gold-400/50 bg-gold/10 text-clay",
+  rose: "border-clay/30 bg-clay/5 text-clay",
+  sky: "border-forest-400/40 bg-forest/5 text-forest",
 };
 
 function isHomePage() {
@@ -69,13 +69,19 @@ function handleOrderClick(event) {
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200/80 bg-stone-50/90 backdrop-blur-xl">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-4 md:px-8">
+    <header className="sticky top-0 z-40 w-full border-b border-ink/10 bg-cream/85 backdrop-blur-xl">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 md:px-8">
         <Link to="/" onClick={handleHomeClick} className="flex min-w-0 items-center gap-3">
-          <img src={logo} alt="MR.KIMBAP logo" className="h-11 w-11 shrink-0 object-contain" />
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-forest shadow-soft">
+            <img src={logo} alt="MR.KIMBAP logo" className="h-8 w-8 object-contain" />
+          </span>
           <div className="min-w-0">
-            <p className="truncate text-base font-black tracking-tight">MR.KIMBAP</p>
-            <p className="truncate text-xs uppercase tracking-[0.22em] text-stone-500">Korean Rice Roll</p>
+            <p className="truncate font-serif text-lg font-black leading-none tracking-tight text-ink">
+              MR.KIMBAP
+            </p>
+            <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.28em] text-ink-soft">
+              Korean Rice Roll
+            </p>
           </div>
         </Link>
 
@@ -84,17 +90,17 @@ export function SiteHeader() {
             to="/"
             onClick={handleHomeClick}
             aria-label="Home"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-sm transition hover:border-stone-300 hover:bg-stone-100"
+            className="hidden h-11 w-11 items-center justify-center rounded-full border border-ink/10 bg-cream-100 text-ink-soft shadow-sm transition hover:border-ink/20 hover:text-ink sm:inline-flex"
           >
             <Home size={17} />
           </Link>
           <Link
             to="/#menu"
             onClick={handleOrderClick}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-stone-800"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-forest px-5 py-3 text-sm font-bold text-cream-100 shadow-soft transition hover:-translate-y-0.5 hover:bg-forest-600"
           >
             <ShoppingBag size={16} />
-            Order
+            Order pickup
           </Link>
         </div>
       </nav>
@@ -104,22 +110,68 @@ export function SiteHeader() {
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-stone-200 bg-stone-50">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-stone-500 md:flex-row md:items-center md:justify-between md:px-8">
-        <p>Copyright {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.</p>
-        <div className="flex flex-wrap gap-x-5 gap-y-2 font-semibold text-stone-700">
-          <Link to="/privacy-policy" className="hover:text-stone-950">
-            Privacy
-          </Link>
-          <Link to="/terms-of-service" className="hover:text-stone-950">
-            Terms
-          </Link>
-          <Link to="/refund-policy" className="hover:text-stone-950">
-            Refunds
-          </Link>
-          <Link to="/contact" className="hover:text-stone-950">
-            Contact
-          </Link>
+    <footer className="border-t border-forest/10 bg-herb text-ink">
+      <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest shadow-soft">
+                <img src={logo} alt="" className="h-8 w-8 object-contain" />
+              </span>
+              <div>
+                <p className="font-serif text-lg font-black leading-none text-ink">MR.KIMBAP</p>
+                <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-ink-soft">
+                  Korean Rice Roll
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-sm leading-6 text-ink-soft">
+              Hand-rolled Korean kimbap, made fresh for market day. Order online and pick up at your
+              neighborhood farmers market.
+            </p>
+            <a
+              href={CONTACT_PHONE_HREF}
+              className="mt-5 inline-flex items-center gap-2 rounded-full border border-forest/20 bg-cream-100 px-4 py-2.5 text-sm font-bold text-forest shadow-sm transition hover:border-forest/40"
+            >
+              <Phone size={15} />
+              {CONTACT_PHONE_DISPLAY}
+            </a>
+          </div>
+
+          <div className="grid grid-cols-2 gap-8 text-sm sm:gap-16">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-forest-500">Explore</p>
+              <div className="mt-4 flex flex-col gap-3 font-semibold text-ink-soft">
+                <Link to="/#menu" className="transition hover:text-forest">
+                  Menu
+                </Link>
+                <Link to="/#order" className="transition hover:text-forest">
+                  Order
+                </Link>
+                <Link to="/contact" className="transition hover:text-forest">
+                  Contact
+                </Link>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-forest-500">Legal</p>
+              <div className="mt-4 flex flex-col gap-3 font-semibold text-ink-soft">
+                <Link to="/privacy-policy" className="transition hover:text-forest">
+                  Privacy
+                </Link>
+                <Link to="/terms-of-service" className="transition hover:text-forest">
+                  Terms
+                </Link>
+                <Link to="/refund-policy" className="transition hover:text-forest">
+                  Refunds
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-forest/10 pt-6 text-xs text-ink-soft">
+          Copyright {new Date().getFullYear()} {BRAND_NAME}. All rights reserved.
         </div>
       </div>
     </footer>
@@ -130,15 +182,15 @@ export function PageShell({ eyebrow, title, description, children, aside, tone =
   const badgeClassName = toneClasses[tone] || toneClasses.emerald;
 
   return (
-    <div className="min-h-screen w-full bg-stone-50 text-left text-stone-950">
+    <div className="min-h-screen w-full bg-cream text-left text-ink">
       <SiteHeader />
 
       <main>
-        <section className="border-b border-stone-200 bg-stone-50">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
+        <section className="border-b border-ink/10 bg-cream">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-16">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-sm font-bold text-stone-600 transition hover:text-stone-950"
+              className="inline-flex items-center gap-2 text-sm font-bold text-ink-soft transition hover:text-ink"
             >
               <ArrowLeft size={16} />
               Back to home
@@ -146,22 +198,26 @@ export function PageShell({ eyebrow, title, description, children, aside, tone =
 
             <div className="mt-8 grid gap-6 md:grid-cols-[minmax(0,1fr)_20rem] md:items-end">
               <div>
-                <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.2em] ${badgeClassName}`}>
+                <p
+                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] ${badgeClassName}`}
+                >
                   {eyebrow}
                 </p>
-                <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-stone-950 md:text-5xl">
+                <h1 className="mt-5 max-w-3xl font-serif text-4xl font-black tracking-tight text-ink md:text-6xl">
                   {title}
                 </h1>
-                <p className="mt-4 max-w-3xl text-lg leading-8 text-stone-600">{description}</p>
+                <p className="mt-4 max-w-3xl text-lg leading-8 text-ink-soft">{description}</p>
               </div>
 
-              {aside && <aside className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">{aside}</aside>}
+              {aside && (
+                <aside className="rounded-4xl border border-ink/10 bg-cream-100 p-6 shadow-soft">{aside}</aside>
+              )}
             </div>
           </div>
         </section>
 
-        <section className="bg-white">
-          <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">{children}</div>
+        <section className="bg-cream-100">
+          <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-16">{children}</div>
         </section>
       </main>
 
@@ -171,30 +227,39 @@ export function PageShell({ eyebrow, title, description, children, aside, tone =
 }
 
 export function PolicyArticle({ children }) {
-  return <article className="rounded-lg border border-stone-200 bg-stone-50 p-6 shadow-sm md:p-8">{children}</article>;
+  return (
+    <article className="rounded-4xl border border-ink/10 bg-cream p-6 shadow-soft md:p-10">{children}</article>
+  );
 }
 
 export function PolicySection({ title, children }) {
   return (
-    <section className="border-b border-stone-200 py-7 first:pt-0 last:border-b-0 last:pb-0">
-      <h2 className="text-2xl font-black tracking-tight text-stone-950">{title}</h2>
-      <div className="mt-3 space-y-3 text-base leading-7 text-stone-700">{children}</div>
+    <section className="border-b border-ink/10 py-7 first:pt-0 last:border-b-0 last:pb-0">
+      <h2 className="font-serif text-2xl font-black tracking-tight text-ink">{title}</h2>
+      <div className="mt-3 space-y-3 text-base leading-7 text-ink-soft">{children}</div>
     </section>
   );
 }
 
 export function LastUpdated() {
-  return <p className="mb-7 text-sm font-bold uppercase tracking-[0.18em] text-stone-500">Last updated {LAST_UPDATED}</p>;
+  return (
+    <p className="mb-7 text-sm font-bold uppercase tracking-[0.18em] text-ink-soft">
+      Last updated {LAST_UPDATED}
+    </p>
+  );
 }
 
-export function ContactAside({ title = "Need help?", text = "Call or text us with your name, pickup date, and order number if you have one." }) {
+export function ContactAside({
+  title = "Need help?",
+  text = "Call or text us with your name, pickup date, and order number if you have one.",
+}) {
   return (
     <div>
-      <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-700">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-stone-600">{text}</p>
+      <p className="text-sm font-bold uppercase tracking-[0.18em] text-forest-500">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-ink-soft">{text}</p>
       <a
         href={CONTACT_PHONE_HREF}
-        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-emerald-700 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-800"
+        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-cream-100 transition hover:bg-forest-600"
       >
         <Phone size={16} />
         {CONTACT_PHONE_DISPLAY}

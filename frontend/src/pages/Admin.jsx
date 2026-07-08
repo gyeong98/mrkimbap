@@ -276,7 +276,7 @@ export default function Admin() {
       <main className="min-h-screen bg-stone-50 px-5 py-12 text-stone-950">
         <div className="mx-auto max-w-md rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest text-white">
               <ShieldCheck size={22} />
             </div>
             <div>
@@ -298,7 +298,7 @@ export default function Admin() {
 
             <button
               type="submit"
-              className="flex w-full items-center justify-center rounded-full bg-stone-950 px-6 py-3 font-black text-white transition hover:bg-stone-800"
+              className="flex w-full items-center justify-center rounded-full bg-forest px-6 py-3 font-black text-white transition hover:bg-forest-600"
             >
               Continue
             </button>
@@ -317,7 +317,7 @@ export default function Admin() {
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-5 md:flex-row md:items-center md:justify-between md:px-8">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.25em] text-emerald-700">MrKimbap</p>
+            <p className="text-sm font-bold uppercase tracking-[0.25em] text-forest-500">MrKimbap</p>
             <h1 className="text-3xl font-black tracking-tight">Admin dashboard</h1>
           </div>
 
@@ -340,7 +340,7 @@ export default function Admin() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="inline-flex items-center justify-center rounded-full bg-stone-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-stone-800"
+              className="inline-flex items-center justify-center rounded-full bg-forest px-5 py-3 text-sm font-bold text-white transition hover:bg-forest-600"
             >
               Sign out
             </button>
@@ -381,7 +381,7 @@ export default function Admin() {
         <section className="mt-8 grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-700 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest text-white">
                 <Plus size={22} />
               </div>
               <div>
@@ -394,7 +394,7 @@ export default function Admin() {
               <div>
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="block text-sm font-bold text-stone-700">Date</span>
-                  <span className="text-sm font-bold text-emerald-700">
+                  <span className="text-sm font-bold text-forest-500">
                     {newPickupDate ? formatDate(newPickupDate) : "No date selected"}
                   </span>
                 </div>
@@ -440,9 +440,9 @@ export default function Admin() {
                               onClick={() => handleCalendarDateSelect(date)}
                               className={`flex h-full w-full items-center justify-center rounded-xl text-sm font-black transition ${
                                 isSelected
-                                  ? "bg-emerald-700 text-white shadow-sm"
+                                  ? "bg-forest text-white shadow-sm"
                                   : isToday
-                                    ? "bg-white text-emerald-700 ring-2 ring-emerald-200"
+                                    ? "bg-white text-forest-500 ring-2 ring-emerald-200"
                                     : "bg-white text-stone-700 hover:bg-stone-100"
                               }`}
                             >
@@ -488,7 +488,7 @@ export default function Admin() {
               <button
                 type="submit"
                 disabled={isSavingDate}
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-stone-950 px-6 py-4 font-black text-white transition hover:bg-stone-800 disabled:cursor-wait disabled:opacity-70"
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-forest px-6 py-4 font-black text-white transition hover:bg-forest-600 disabled:cursor-wait disabled:opacity-70"
               >
                 {isSavingDate && <Loader2 className="animate-spin" size={18} />}
                 Add date
@@ -499,7 +499,7 @@ export default function Admin() {
           <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-white">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest text-white">
                   <CalendarDays size={22} />
                 </div>
                 <div>
@@ -585,7 +585,7 @@ export default function Admin() {
         <section className="mt-8 rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
           <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-stone-950 text-white">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest text-white">
                 <ShoppingBag size={22} />
               </div>
               <div>
