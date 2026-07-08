@@ -147,6 +147,8 @@ function buildPickupSchedule(dates) {
       locationSchedule.months.set(monthKey, {
         monthKey,
         monthName,
+        year,
+        month,
         days: [],
       });
     }
@@ -156,10 +158,12 @@ function buildPickupSchedule(dates) {
 
   return Array.from(scheduleByLocation.values()).map((locationSchedule) => ({
     ...locationSchedule,
-    months: Array.from(locationSchedule.months.values()).map((monthSchedule) => ({
-      ...monthSchedule,
-      days: Array.from(new Set(monthSchedule.days)).sort((a, b) => a - b),
-    })),
+    months: Array.from(locationSchedule.months.values())
+      .map((monthSchedule) => ({
+        ...monthSchedule,
+        days: Array.from(new Set(monthSchedule.days)).sort((a, b) => a - b),
+      }))
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey)),
   }));
 }
 
@@ -275,6 +279,151 @@ function HeroCarousel() {
         </div>
       </div>
     </div>
+  );
+}
+
+const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function MarketCalendarCard({ locationSchedule, index }) {
+  const { months } = locationSchedule;
+  const [isOpen, setIsOpen] = useState(false);
+  const [monthIndex, setMonthIndex] = useState(0);
+  const activeMonth = months[monthIndex] || months[0];
+  const totalDates = months.reduce((sum, monthSchedule) => sum + monthSchedule.days.length, 0);
+
+  const calendarCells = useMemo(() => {
+    if (!activeMonth) {
+      return [];
+    }
+
+    const { year, month, days } = activeMonth;
+    const firstWeekday = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const pickupDays = new Set(days);
+    const cells = [];
+
+    for (let blank = 0; blank < firstWeekday; blank += 1) {
+      cells.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push({ day, isPickup: pickupDays.has(day) });
+    }
+
+    return cells;
+  }, [activeMonth]);
+
+  return (
+    <motion.section
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.45, delay: index * 0.05 }}
+      className="flex flex-col rounded-4xl border border-ink/10 bg-cream-100 p-6 shadow-soft"
+    >
+      <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest/10 text-forest">
+        <MapPin size={20} />
+      </span>
+      <h3 className="mt-4 font-serif text-2xl font-black tracking-tight text-ink">
+        {locationSchedule.locationName}
+      </h3>
+      {locationSchedule.locationAddress && (
+        <p className="mt-1 text-sm font-semibold text-ink-soft">
+          {locationSchedule.locationAddress}
+        </p>
+      )}
+      {locationSchedule.locationHours && (
+        <p className="mt-1 text-sm font-medium text-ink-soft/80">{locationSchedule.locationHours}</p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-ink/10 pt-4">
+        <p className="text-sm font-bold text-forest">
+          {totalDates} market day{totalDates === 1 ? "" : "s"}
+        </p>
+        <button
+          type="button"
+          onClick={() => setIsOpen((open) => !open)}
+          aria-expanded={isOpen}
+          className="inline-flex items-center gap-1.5 rounded-full bg-forest/10 px-3.5 py-2 text-xs font-bold text-forest transition hover:bg-forest/20"
+        >
+          <CalendarDays size={15} />
+          {isOpen ? "Hide calendar" : "See in calendar"}
+        </button>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {isOpen && activeMonth && (
+          <motion.div
+            key="calendar"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="mt-4 rounded-3xl border border-ink/10 bg-cream p-4">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setMonthIndex((current) => Math.max(0, current - 1))}
+                  disabled={monthIndex === 0}
+                  aria-label="Previous month"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-forest transition hover:bg-forest/10 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <p className="font-serif text-lg font-black text-ink">
+                  {activeMonth.monthName} {activeMonth.year}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMonthIndex((current) => Math.min(months.length - 1, current + 1))
+                  }
+                  disabled={monthIndex >= months.length - 1}
+                  aria-label="Next month"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-forest transition hover:bg-forest/10 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+                {WEEKDAY_LABELS.map((label, labelIndex) => (
+                  <span
+                    key={`${label}-${labelIndex}`}
+                    className="py-1 text-[11px] font-bold uppercase tracking-wide text-ink-soft/60"
+                  >
+                    {label}
+                  </span>
+                ))}
+                {calendarCells.map((cell, cellIndex) =>
+                  cell ? (
+                    <span
+                      key={cellIndex}
+                      className={
+                        cell.isPickup
+                          ? "flex aspect-square items-center justify-center rounded-full bg-forest text-sm font-black text-cream-100 shadow-soft"
+                          : "flex aspect-square items-center justify-center text-sm font-semibold text-ink-soft/50"
+                      }
+                      aria-current={cell.isPickup ? "date" : undefined}
+                    >
+                      {cell.day}
+                    </span>
+                  ) : (
+                    <span key={cellIndex} aria-hidden="true" />
+                  ),
+                )}
+              </div>
+
+              <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-ink-soft">
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-forest" />
+                Pickup available
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.section>
   );
 }
 
@@ -590,41 +739,13 @@ export default function App() {
                 Loading pickup dates...
               </div>
             ) : pickupSchedule.length > 0 ? (
-              <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="mt-10 grid items-start gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {pickupSchedule.map((locationSchedule, index) => (
-                  <motion.section
+                  <MarketCalendarCard
                     key={locationSchedule.locationName}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.45, delay: index * 0.05 }}
-                    className="flex flex-col rounded-4xl border border-ink/10 bg-cream-100 p-6 shadow-soft"
-                  >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-forest/10 text-forest">
-                      <MapPin size={20} />
-                    </span>
-                    <h3 className="mt-4 font-serif text-2xl font-black tracking-tight text-ink">
-                      {locationSchedule.locationName}
-                    </h3>
-                    {locationSchedule.locationAddress && (
-                      <p className="mt-1 text-sm font-semibold text-ink-soft">
-                        {locationSchedule.locationAddress}
-                      </p>
-                    )}
-                    {locationSchedule.locationHours && (
-                      <p className="mt-1 text-sm font-medium text-ink-soft/80">
-                        {locationSchedule.locationHours}
-                      </p>
-                    )}
-                    <dl className="mt-4 space-y-2 border-t border-ink/10 pt-4 text-base leading-7 text-ink">
-                      {locationSchedule.months.map((monthSchedule) => (
-                        <div key={monthSchedule.monthKey} className="flex flex-wrap gap-x-2">
-                          <dt className="font-black text-forest">{monthSchedule.monthName}:</dt>
-                          <dd className="text-ink-soft">{monthSchedule.days.join(", ")}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </motion.section>
+                    locationSchedule={locationSchedule}
+                    index={index}
+                  />
                 ))}
               </div>
             ) : (
