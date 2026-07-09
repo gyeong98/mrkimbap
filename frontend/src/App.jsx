@@ -77,12 +77,6 @@ function formatPickupDate(dateString) {
   return new Date(year, month - 1, day).toLocaleDateString();
 }
 
-function formatPickupDateOption(date) {
-  const pickupDate = formatPickupDate(date.pickup_date);
-
-  return date.location_name ? `${pickupDate} - ${date.location_name}` : pickupDate;
-}
-
 function getPhoneDigits(phoneNumber) {
   return String(phoneNumber || "").replace(/\D/g, "").slice(0, PHONE_DIGIT_COUNT);
 }
@@ -427,11 +421,216 @@ function MarketCalendarCard({ locationSchedule, index }) {
   );
 }
 
+function PickupDatePicker({
+  schedule,
+  availableDates,
+  selectedLocationName,
+  onSelectLocation,
+  selectedPickupDateId,
+  onSelectDate,
+}) {
+  const [monthIndex, setMonthIndex] = useState(0);
+  const activeLocation =
+    schedule.find((location) => location.locationName === selectedLocationName) || null;
+
+  useEffect(() => {
+    setMonthIndex(0);
+  }, [selectedLocationName]);
+
+  const dateIdByKey = useMemo(() => {
+    const map = new Map();
+    availableDates.forEach((date) => {
+      const normalized = normalizePickupDate(date.pickup_date);
+      if (!normalized) {
+        return;
+      }
+      const locationName = date.location_name || "Pickup location";
+      map.set(`${locationName}|${normalized}`, String(date.id));
+    });
+    return map;
+  }, [availableDates]);
+
+  const months = activeLocation ? activeLocation.months : [];
+  const activeMonth = months[monthIndex] || months[0] || null;
+
+  const calendarCells = useMemo(() => {
+    if (!activeLocation || !activeMonth) {
+      return [];
+    }
+
+    const { year, month, days } = activeMonth;
+    const firstWeekday = new Date(year, month - 1, 1).getDay();
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const pickupDays = new Set(days);
+    const cells = [];
+
+    for (let blank = 0; blank < firstWeekday; blank += 1) {
+      cells.push(null);
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const key = `${activeLocation.locationName}|${year}-${String(month).padStart(2, "0")}-${String(
+        day,
+      ).padStart(2, "0")}`;
+      cells.push({ day, isPickup: pickupDays.has(day), dateId: dateIdByKey.get(key) || "" });
+    }
+
+    return cells;
+  }, [activeLocation, activeMonth, dateIdByKey]);
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <span className="mb-2 block text-sm font-bold text-ink">1. Choose a market</span>
+        {schedule.length === 0 ? (
+          <p className="rounded-2xl border border-ink/10 bg-cream-100 px-4 py-3 text-sm font-semibold text-ink-soft">
+            No pickup locations available right now.
+          </p>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {schedule.map((location) => {
+              const isActive = location.locationName === selectedLocationName;
+              return (
+                <button
+                  key={location.locationName}
+                  type="button"
+                  onClick={() => onSelectLocation(location.locationName)}
+                  aria-pressed={isActive}
+                  className={
+                    isActive
+                      ? "flex flex-col rounded-2xl border-2 border-forest bg-forest px-4 py-3 text-left text-cream-100 shadow-soft transition"
+                      : "flex flex-col rounded-2xl border border-ink/10 bg-cream-100 px-4 py-3 text-left text-ink transition hover:border-forest/40"
+                  }
+                >
+                  <span className="flex items-center gap-1.5 font-bold">
+                    <MapPin size={15} />
+                    {location.locationName}
+                  </span>
+                  {location.locationAddress && (
+                    <span
+                      className={
+                        isActive
+                          ? "mt-0.5 text-xs font-semibold text-cream-100/80"
+                          : "mt-0.5 text-xs font-semibold text-ink-soft"
+                      }
+                    >
+                      {location.locationAddress}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <AnimatePresence initial={false}>
+        {activeLocation && activeMonth && (
+          <motion.div
+            key={activeLocation.locationName}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.25 }}
+          >
+            <span className="mb-2 block text-sm font-bold text-ink">
+              2. Pick an available date
+            </span>
+            <div className="rounded-3xl border border-ink/10 bg-cream p-4">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setMonthIndex((current) => Math.max(0, current - 1))}
+                  disabled={monthIndex === 0}
+                  aria-label="Previous month"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-forest transition hover:bg-forest/10 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <p className="font-serif text-lg font-black text-ink">
+                  {activeMonth.monthName} {activeMonth.year}
+                </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMonthIndex((current) => Math.min(months.length - 1, current + 1))
+                  }
+                  disabled={monthIndex >= months.length - 1}
+                  aria-label="Next month"
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-forest transition hover:bg-forest/10 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+
+              <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+                {WEEKDAY_LABELS.map((label, labelIndex) => (
+                  <span
+                    key={`${label}-${labelIndex}`}
+                    className="py-1 text-[11px] font-bold uppercase tracking-wide text-ink-soft/60"
+                  >
+                    {label}
+                  </span>
+                ))}
+                {calendarCells.map((cell, cellIndex) => {
+                  if (!cell) {
+                    return <span key={cellIndex} aria-hidden="true" />;
+                  }
+
+                  if (!cell.isPickup) {
+                    return (
+                      <span
+                        key={cellIndex}
+                        className="flex aspect-square items-center justify-center text-sm font-semibold text-ink-soft/40"
+                      >
+                        {cell.day}
+                      </span>
+                    );
+                  }
+
+                  const isSelected = cell.dateId && cell.dateId === selectedPickupDateId;
+                  return (
+                    <button
+                      key={cellIndex}
+                      type="button"
+                      onClick={() => onSelectDate(cell.dateId)}
+                      aria-pressed={isSelected}
+                      aria-label={`Select ${activeMonth.monthName} ${cell.day}`}
+                      className={
+                        isSelected
+                          ? "flex aspect-square items-center justify-center rounded-full bg-gold text-sm font-black text-forest ring-2 ring-forest ring-offset-2 ring-offset-cream transition"
+                          : "flex aspect-square items-center justify-center rounded-full bg-forest text-sm font-black text-cream-100 shadow-soft transition hover:-translate-y-0.5 hover:bg-forest-600"
+                      }
+                    >
+                      {cell.day}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-ink-soft">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 rounded-full bg-forest" />
+                  Available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 rounded-full bg-gold" />
+                  Selected
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function App() {
   const [menuItems, setMenuItems] = useState([]);
   const [quantities, setQuantities] = useState({});
   const [pickupDate, setPickupDate] = useState("");
   const [selectedPickupDateId, setSelectedPickupDateId] = useState("");
+  const [selectedLocationName, setSelectedLocationName] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -539,8 +738,13 @@ export default function App() {
     }));
   };
 
-  const handlePickupDateChange = (event) => {
-    const nextPickupDateId = event.target.value;
+  const handleSelectLocation = (locationName) => {
+    setSelectedLocationName(locationName);
+    setSelectedPickupDateId("");
+    setPickupDate("");
+  };
+
+  const handleSelectPickupDate = (nextPickupDateId) => {
     const nextPickupDate = availableDates.find((date) => String(date.id) === nextPickupDateId);
 
     setSelectedPickupDateId(nextPickupDateId);
@@ -884,25 +1088,14 @@ export default function App() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-bold text-ink">Pickup Date</span>
-                    <select
-                      value={selectedPickupDateId}
-                      onChange={handlePickupDateChange}
-                      required
-                      className={inputClasses}
-                    >
-                      <option value="" disabled>
-                        Select pickup date
-                      </option>
-
-                      {availableDates.map((date) => (
-                        <option key={date.id} value={date.id}>
-                          {formatPickupDateOption(date)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <PickupDatePicker
+                    schedule={pickupSchedule}
+                    availableDates={availableDates}
+                    selectedLocationName={selectedLocationName}
+                    onSelectLocation={handleSelectLocation}
+                    selectedPickupDateId={selectedPickupDateId}
+                    onSelectDate={handleSelectPickupDate}
+                  />
 
                   <p className="rounded-2xl bg-gold/10 px-4 py-3 text-sm font-semibold text-clay">
                     Need a same-day order? Please contact us directly at{" "}
