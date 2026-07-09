@@ -480,7 +480,9 @@ function PickupDatePicker({
   return (
     <div className="space-y-4">
       <div>
-        <span className="mb-2 block text-sm font-bold text-ink">1. Choose a market</span>
+        <span className="mb-2 block text-sm font-bold text-ink">
+          1. Choose a market <span className="text-clay">*</span>
+        </span>
         {schedule.length === 0 ? (
           <p className="rounded-2xl border border-ink/10 bg-cream-100 px-4 py-3 text-sm font-semibold text-ink-soft">
             No pickup locations available right now.
@@ -533,7 +535,7 @@ function PickupDatePicker({
             transition={{ duration: 0.25 }}
           >
             <span className="mb-2 block text-sm font-bold text-ink">
-              2. Pick an available date
+              2. Pick an available date <span className="text-clay">*</span>
             </span>
             <div className="rounded-3xl border border-ink/10 bg-cream p-4">
               <div className="flex items-center justify-between">
@@ -1083,7 +1085,9 @@ export default function App() {
                   </div>
                   <div>
                     <h3 className="font-serif text-2xl font-black text-ink">Pickup details</h3>
-                    <p className="text-sm font-semibold text-forest-500">Required before checkout</p>
+                    <p className="text-sm font-semibold text-forest-500">
+                      Fields marked <span className="text-clay">*</span> are required
+                    </p>
                   </div>
                 </div>
 
@@ -1109,29 +1113,39 @@ export default function App() {
                   </p>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-bold text-ink">Customer Name</span>
+                    <span className="mb-2 block text-sm font-bold text-ink">
+                      Customer Name <span className="text-clay">*</span>
+                    </span>
                     <input
                       type="text"
                       value={customerName}
                       onChange={(event) => setCustomerName(event.target.value)}
                       placeholder="Enter your name"
+                      required
+                      aria-required="true"
                       className={inputClasses}
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-bold text-ink">Customer Email</span>
+                    <span className="mb-2 block text-sm font-bold text-ink">
+                      Customer Email <span className="text-clay">*</span>
+                    </span>
                     <input
                       type="email"
                       value={customerEmail}
                       onChange={(event) => setCustomerEmail(event.target.value)}
                       placeholder="Enter your email"
+                      required
+                      aria-required="true"
                       className={inputClasses}
                     />
                   </label>
 
                   <label className="block">
-                    <span className="mb-2 block text-sm font-bold text-ink">Customer Phone</span>
+                    <span className="mb-2 block text-sm font-bold text-ink">
+                      Customer Phone <span className="text-clay">*</span>
+                    </span>
                     <input
                       type="tel"
                       inputMode="tel"
@@ -1140,6 +1154,8 @@ export default function App() {
                       onChange={(event) => setCustomerPhone(formatPhoneNumber(event.target.value))}
                       placeholder="(555) 123-4567"
                       maxLength={14}
+                      required
+                      aria-required="true"
                       className={inputClasses}
                     />
                   </label>
