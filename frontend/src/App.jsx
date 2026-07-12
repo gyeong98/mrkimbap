@@ -935,6 +935,17 @@ export default function App() {
               <p className="mt-4 text-lg leading-8 text-ink-soft">
                 Choose a date and location below, then place your order for that market day.
               </p>
+              <p className="mt-3 text-base leading-7 text-ink-soft">
+                We accept catering orders and offer delivery. Call or text{" "}
+                <a href="tel:6129192645" className="font-bold text-forest underline underline-offset-4">
+                  (612) 919-2645
+                </a>{" "}
+                or email{" "}
+                <a href="mailto:support@mrkimbap.com" className="font-bold text-forest underline underline-offset-4">
+                  support@mrkimbap.com
+                </a>
+                .
+              </p>
             </div>
 
             {isLoadingPickupDates ? (
@@ -1106,6 +1117,13 @@ export default function App() {
                       className="font-black underline decoration-gold underline-offset-4"
                     >
                       (612) 919-2645
+                    </a>
+                    {" "}or email{" "}
+                    <a
+                      href="mailto:support@mrkimbap.com"
+                      className="font-black underline decoration-gold underline-offset-4"
+                    >
+                      support@mrkimbap.com
                     </a>
                     .
                   </p>

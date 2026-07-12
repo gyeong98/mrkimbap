@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { CalendarDays, MessageSquareText, Phone, ShoppingBag } from "lucide-react";
-import { CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF, PageShell } from "./PageLayout";
+import { CalendarDays, Mail, MessageSquareText, Phone, ShoppingBag } from "lucide-react";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF, PageShell } from "./PageLayout";
 
 const helpTopics = [
   {
@@ -24,8 +24,8 @@ export default function Contact() {
   return (
     <PageShell
       eyebrow="Contact"
-      title="Call or text us for order help."
-      description="For the fastest response, reach out by phone with your name, pickup date, and order number if available."
+      title="Call, text, or email us."
+      description="We accept catering orders and offer delivery. Contact us with your name, requested date, and order details if available."
       aside={
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-forest-500">Fastest contact</p>
@@ -35,6 +35,13 @@ export default function Contact() {
           >
             <Phone size={16} />
             {CONTACT_PHONE_DISPLAY}
+          </a>
+          <a
+            href={CONTACT_EMAIL_HREF}
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-forest/20 bg-cream px-4 py-3 text-sm font-bold text-forest transition hover:border-forest/40"
+          >
+            <Mail size={16} />
+            {CONTACT_EMAIL}
           </a>
         </div>
       }
@@ -71,6 +78,13 @@ export default function Contact() {
           >
             <Phone size={16} />
             Call or text
+          </a>
+          <a
+            href={CONTACT_EMAIL_HREF}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-cream px-5 py-3 text-sm font-bold text-ink transition hover:border-ink/25"
+          >
+            <Mail size={16} />
+            {CONTACT_EMAIL}
           </a>
           <Link
             to="/#menu"

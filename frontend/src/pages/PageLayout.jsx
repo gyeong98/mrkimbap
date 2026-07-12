@@ -1,10 +1,12 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Home, Phone, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Home, Mail, Phone, ShoppingBag } from "lucide-react";
 import logo from "../assets/logo-transparent.png";
 
 export const BRAND_NAME = "MrKimbap";
 export const CONTACT_PHONE_DISPLAY = "(612) 919-2645";
 export const CONTACT_PHONE_HREF = "tel:6129192645";
+export const CONTACT_EMAIL = "support@mrkimbap.com";
+export const CONTACT_EMAIL_HREF = `mailto:${CONTACT_EMAIL}`;
 export const LAST_UPDATED = "July 7, 2026";
 
 const toneClasses = {
@@ -129,13 +131,22 @@ export function SiteFooter() {
               Hand-rolled Korean kimbap, made fresh for market day. Order online and pick up at your
               neighborhood farmers market.
             </p>
-            <a
-              href={CONTACT_PHONE_HREF}
-              className="mt-5 inline-flex items-center gap-2 rounded-full border border-forest/20 bg-cream-100 px-4 py-2.5 text-sm font-bold text-forest shadow-sm transition hover:border-forest/40"
-            >
-              <Phone size={15} />
-              {CONTACT_PHONE_DISPLAY}
-            </a>
+            <div className="mt-5 flex flex-col items-start gap-2">
+              <a
+                href={CONTACT_PHONE_HREF}
+                className="inline-flex items-center gap-2 rounded-full border border-forest/20 bg-cream-100 px-4 py-2.5 text-sm font-bold text-forest shadow-sm transition hover:border-forest/40"
+              >
+                <Phone size={15} />
+                {CONTACT_PHONE_DISPLAY}
+              </a>
+              <a
+                href={CONTACT_EMAIL_HREF}
+                className="inline-flex items-center gap-2 rounded-full border border-forest/20 bg-cream-100 px-4 py-2.5 text-sm font-bold text-forest shadow-sm transition hover:border-forest/40"
+              >
+                <Mail size={15} />
+                {CONTACT_EMAIL}
+              </a>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 text-sm sm:gap-16">
@@ -263,6 +274,13 @@ export function ContactAside({
       >
         <Phone size={16} />
         {CONTACT_PHONE_DISPLAY}
+      </a>
+      <a
+        href={CONTACT_EMAIL_HREF}
+        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-forest/20 bg-cream px-4 py-3 text-sm font-bold text-forest transition hover:border-forest/40"
+      >
+        <Mail size={16} />
+        {CONTACT_EMAIL}
       </a>
     </div>
   );

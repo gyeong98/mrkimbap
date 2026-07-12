@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { Phone, RotateCcw, ShoppingBag, XCircle } from "lucide-react";
-import { CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF, PageShell } from "./PageLayout";
+import { Mail, Phone, RotateCcw, ShoppingBag, XCircle } from "lucide-react";
+import { CONTACT_EMAIL, CONTACT_EMAIL_HREF, CONTACT_PHONE_DISPLAY, CONTACT_PHONE_HREF, PageShell } from "./PageLayout";
 
 export default function Cancel() {
   return (
@@ -49,6 +49,13 @@ export default function Cancel() {
           >
             <Phone size={16} />
             {CONTACT_PHONE_DISPLAY}
+          </a>
+          <a
+            href={CONTACT_EMAIL_HREF}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-ink/15 bg-cream-100 px-5 py-3 text-sm font-bold text-ink transition hover:border-ink/25"
+          >
+            <Mail size={16} />
+            {CONTACT_EMAIL}
           </a>
         </div>
       </section>
