@@ -67,3 +67,7 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Local AI agent skill bundles
+.agents/
+skills-lock.json
