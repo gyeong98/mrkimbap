@@ -186,6 +186,7 @@ async function sendOrderEmail(order) {
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const fromEmail = process.env.TWILIO_EMAIL_FROM_EMAIL;
   const fromName = process.env.TWILIO_EMAIL_FROM_NAME || "MrKimbap";
+  const adminEmail = process.env.ADMIN_EMAIL;
 
   if (!accountSid || !authToken || !fromEmail) {
     console.warn("Order email skipped: set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_EMAIL_FROM_EMAIL.");
@@ -198,37 +199,44 @@ async function sendOrderEmail(order) {
   }
 
   const email = buildOrderEmail(order);
-  const response = await fetch(TWILIO_EMAIL_SEND_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: {
-        address: fromEmail,
-        name: fromName,
+  const sendEmailTo = async (address, name) => {
+    const response = await fetch(TWILIO_EMAIL_SEND_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString("base64")}`,
+        "Content-Type": "application/json",
       },
-      to: [
-        {
-          address: order.customer_email,
-          name: order.customer_name || undefined,
+      body: JSON.stringify({
+        from: {
+          address: fromEmail,
+          name: fromName,
         },
-      ],
-      content: {
-        subject: email.subject,
-        html: email.html,
-        text: email.plainText,
-      },
-    }),
-  });
+        to: [{ address, name: name || undefined }],
+        content: {
+          subject: email.subject,
+          html: email.html,
+          text: email.plainText,
+        },
+      }),
+    });
 
-  if (!response.ok) {
-    const responseBody = await response.text();
-    throw new Error(`Twilio email failed with ${response.status}: ${responseBody}`);
-  }
+    if (!response.ok) {
+      const responseBody = await response.text();
+      throw new Error(`Twilio email failed with ${response.status}: ${responseBody}`);
+    }
+  };
+
+  await sendEmailTo(order.customer_email, order.customer_name);
 
   console.log(`Order confirmation email sent for order ${order.id}.`);
+
+  if (!isValidEmail(adminEmail)) {
+    console.warn(`Admin order email skipped for order ${order.id}: set ADMIN_EMAIL to a valid email address.`);
+    return;
+  }
+
+  await sendEmailTo(adminEmail, "MrKimbap Admin");
+  console.log(`Admin order email sent for order ${order.id}.`);
 }
 
 async function sendOrderText(order) {

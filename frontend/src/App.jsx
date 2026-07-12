@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import frontPicture from "./assets/frontpicture.jpg";
-import rollClassic from "./assets/roll-classic.png";
-import rollHandheld from "./assets/roll-handheld.png";
-import rollSpread from "./assets/roll-spread.png";
+import HERO_SLIDES_1 from "./assets/heroslides1.jpg";
+import HERO_SLIDES_2 from "./assets/heroslides2.jpg";
+import HERO_SLIDES_3 from "./assets/heroslides3.jpg";
 import { SiteFooter, SiteHeader } from "./pages/PageLayout";
 import {
   CalendarDays,
@@ -19,10 +18,9 @@ import {
 } from "lucide-react";
 
 const HERO_SLIDES = [
-  { src: frontPicture, alt: "Fresh Korean kimbap rolls ready for pickup" },
-  { src: rollClassic, alt: "Sliced kimbap rounds with colorful fresh fillings" },
-  { src: rollHandheld, alt: "Hand holding a kimbap roll at the farmers market" },
-  { src: rollSpread, alt: "A spread of kimbap varieties on a wooden board" },
+  { src: HERO_SLIDES_1, alt: "" },
+  { src: HERO_SLIDES_2, alt: "" },
+  { src: HERO_SLIDES_3, alt: "" },
 ];
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
@@ -980,8 +978,8 @@ export default function App() {
                 </h2>
               </div>
               <p className="max-w-xs text-sm leading-6 text-ink-soft md:text-right">
-                Every roll is packed to order with crisp vegetables, seasoned rice, and our
-                house-made fillings.
+                Every roll is packed to order with crisp vegetables, seasoned rice, and our{' '}
+                <span className="whitespace-nowrap">house-made</span> fillings.
               </p>
             </div>
 
